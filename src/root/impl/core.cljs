@@ -34,9 +34,6 @@
 
 (s/def ::entity (s/keys :req-un [::id] :opt-un [::type ::content ::markup ::attrs]))
 
-(doseq [d data]
-  (println (s/conform ::entity d)))
-
 (def state (atom (into {} (map (fn [x] [(:id x) x])) data)))
 
 (defn id? [x] (integer? x))
@@ -58,52 +55,8 @@
 (defn resolve-children [{:as ent :keys [content]}]
   (cond-> ent content (update :content resolve-content)))
 
-(let [{:as ent :keys [content]} (second data)]
-  (resolve-children ent))
-
-(declare resolved-view)
-
-(defmulti view :type)
-
-(defn default-content-view [{:as ent :keys [type markup content]}]
-  (js/console.log :ent ent :content content)
-  )
-
-(defn- default-child-view [content]
-  (case (meta content)
-    ::entity [resolved-view content]
-    ::entities (into [:div] (map resolved-view) content)
-    ::entity-map (into [:div]
-                       (map
-                        (fn [[k child-or-children]]
-                          [:div (name k)
-                           [default-child-view child-or-children]]))
-                       content)))
-
 (defn __border [color]
   {:border (str "1px solid " (name color))})
-
-(defn default-view [{:as ent :keys [type markup content]}]
-  [:div
-   {:style (merge (__border :tomato)
-                  {:padding    10
-                   :margin-top 5})}
-   [:div "Type: " (name type)]
-   (cond
-     markup (into [:div "Markup: "] markup)
-     content [:div "Content: " [default-child-view content]])])
-
-(defmethod view :default
-  [ent]
-  (default-view ent))
-
-(defn resolved-view [ent]
-  [view (resolve-children ent)])
-
-(defn root [id]
-  [resolved-view (lookup id)])
-
-;(resolve-children (lookup 1))
 
 (defn multi-dispatch [dispatch-fn]
   (let [table (atom {:default
