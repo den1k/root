@@ -12,7 +12,7 @@
    [:h3 "Edit this and watch it change!"]])
 
 (defn start []
-  (reagent/render-component [root/rrr 1]
+  (reagent/render-component [root/test-root 1]
                             (. js/document (getElementById "app"))))
 
 (defn ^:export init []

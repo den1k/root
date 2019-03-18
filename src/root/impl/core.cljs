@@ -32,10 +32,15 @@
 (defn id? [x] (integer? x))
 (defn lookup [id] (get @state id))
 
-(defn conform-or-false [spec x]
+(defn conform! [spec x]
   (let [ret (s/conform spec x)]
     (if (= ret ::s/invalid)
-      false
+      (throw
+       (ex-info "Value doesn't match spec"
+                {:value   x
+                 :spec    spec
+                 :explain (s/explain-str spec x)
+                 :explain-data (s/explain-data spec x)}))
       ret)))
 
 (defn __border [color]
@@ -65,7 +70,7 @@
 (defn resolve-content
   ([content] (resolve-content content identity))
   ([content f]
-   (when-let [[type refs*] (conform-or-false ::content content)]
+   (let [[type refs*] (conform! ::content content)]
      (case type
        :ref (with-meta (f refs*) ::entity)
        :refs (with-meta (mapv f refs*) ::entities)
@@ -78,14 +83,11 @@
 
 (defn resolved-view
   ([{:as root :keys [root-id]}] (resolved-view root root-id))
-  ([{:keys [dispatch-view]} id]
-   (let [f (comp dispatch-view
-                 resolve-child-views
-                 lookup)]
-     (dispatch-view
-      (resolve-child-views (lookup id) (comp dispatch-view
-                                             #(resolve-child-views % f)
-                                             lookup))))))
+  ([{:as root :keys [dispatch-view lookup]} id]
+   (-> id
+       lookup
+       (resolve-child-views #(resolved-view root %))
+       dispatch-view)))
 
 (defn default-child-view [content]
   (case (meta content)
@@ -109,7 +111,7 @@
      content [:div "Content: " [default-child-view content]])])
 
 (defn ui-root [{:as opts :keys [ent->view-name]}]
-  {:pre [ent->view-name]}
+  {:pre [ent->view-name lookup]}
   (merge
    (multi-dispatch {:dispatch-fn         (:ent->view-name opts)
                     :add-method-key      :add-view
@@ -119,11 +121,11 @@
    opts))
 
 
-(defn rrr [id]
+(defn test-root [id]
   (let [root (ui-root {:root-id        id
                        :lookup         lookup
                        :ent->view-name :type})]
 
-    (doto (resolved-view root id)
+    (doto (resolved-view root)
       js/console.log)))
 
