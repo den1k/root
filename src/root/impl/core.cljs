@@ -38,25 +38,15 @@
       false
       ret)))
 
-(defn resolve-content [content]
-  (when-let [[type refs*] (conform-or-false ::content content)]
-    (case type
-      :ref (with-meta (lookup refs*) ::entity)
-      :refs (with-meta (mapv lookup refs*) ::entities)
-      :refs-map (with-meta (md/map-vals resolve-content content) ::entity-map))))
-
-(defn resolve-children [{:as ent :keys [content]}]
-  (cond-> ent content (update :content resolve-content)))
-
 (defn __border [color]
   {:border (str "1px solid " (name color))})
 
 (defn multi-dispatch
-  [{:keys [dispatch-fn add-method-key remove-method-key dispatch-method-key default-dispatch]}]
+  [{:keys [dispatch-fn add-method-key remove-method-key dispatch-method-key default-dispatch-fn]}]
   {:pre [(ifn? dispatch-fn)
-         (every? identity [add-method-key remove-method-key dispatch-method-key])]}
+         add-method-key remove-method-key dispatch-method-key]}
   (let [table (atom {:default
-                     (or default-dispatch
+                     (or default-dispatch-fn
                          (fn [x]
                            (throw
                             (ex-info
@@ -72,104 +62,30 @@
                                                   (get t :default))]
                              [f x]))}))
 
-;; should be a deftype or record that impls multidispatch
-;; should root impl multimethod?
-
-#_(defn ui-roott [{:as opts :keys [lookup dispatch-fn]}]
-    (let [{:as dfns :keys [dispatch-view]} (multi-dispatch dispatch-fn)]
-      (letfn [(resolve-content [content]
-                (when-let [[type refs*] (conform-or-false ::content content)]
-                  (case type
-                    :ref (with-meta (lookup refs*) ::entity)
-                    :refs (with-meta (mapv lookup refs*) ::entities)
-                    :refs-map (with-meta (md/map-vals resolve-content content) ::entity-map))))
-
-              (resolve-children [{:as ent :keys [content]}]
-                (cond-> ent content (update :content resolve-content)))
-
-              (resolved-view [ent] [dispatch-view (resolve-children ent)])
-
-              (render [id] [resolved-view (lookup id)])]
-        (merge (select-keys opts [:lookup])
-               dfns
-               {:render        render
-                :resolved-view resolved-view})))
-
-    )
-
-
-;; TODO rewrite the below into a defrecord or deftype storing lookup
-;; and implementing serveral protocols to add and remove views, get state, and render
-;(def r (ui-roott {:lookup lookup :dispatch-fn :type}))
-
-#_(def rr
-    (let [{:keys [lookup add-view resolved-view render]} r]
-      (letfn [(default-view [{:as ent :keys [type markup content]}]
-                [:div
-                 {:style (merge (__border :tomato)
-                                {:padding    10
-                                 :margin-top 5})}
-                 [:div "Type: " (name type)]
-                 (cond
-                   markup (into [:div "Markup: "] markup)
-                   content [:div "Content: " [default-child-view content]])])
-              (default-child-view [content]
-                (case (meta content)
-                  ::entity [resolved-view content]
-                  ::entities (into [:div] (map resolved-view) content)
-                  ::entity-map (into [:div]
-                                     (map
-                                      (fn [[k child-or-children]]
-                                        [:div (name k)
-                                         [default-child-view child-or-children]]))
-                                     content)))]
-        (add-view :default default-view)
-        render)))
-
-(declare resolve-child-views)
-
-(defn resolve-contentt
-  ([content] (resolve-contentt content identity))
+(defn resolve-content
+  ([content] (resolve-content content identity))
   ([content f]
    (when-let [[type refs*] (conform-or-false ::content content)]
      (case type
        :ref (with-meta (f refs*) ::entity)
        :refs (with-meta (mapv f refs*) ::entities)
-       :refs-map (with-meta (md/map-vals #(resolve-contentt % f) content) ::entity-map)))))
+       :refs-map (with-meta (md/map-vals #(resolve-content % f) content) ::entity-map)))))
 
 (defn resolve-child-views
   ([ent] (resolve-child-views ent identity))
   ([{:as ent :keys [content]} f]
-   (cond-> ent content (update :content resolve-contentt f))))
+   (cond-> ent content (update :content resolve-content f))))
 
-
-(defprotocol IUIRoot
-  #_(add-view [this view-name view])
-  #_(remove-view [this view-name])
-  ;(resolve-child-views [this x])
-  ;(-lookup [this x])
-  (render [this] [this ids])
-  (resolved-view [this id])
-  #_(dispatch-view [this view-name]))
-
-(defrecord UIRoot [root-id lookup add-view remove-view dispatch-view]
-  IUIRoot
-
-  (resolved-view [_ id]
-    (let [f (comp dispatch-view
-                  resolve-child-views
-                  lookup)]
-      (dispatch-view
-       (resolve-child-views (lookup id) (comp dispatch-view
-                                              #(resolve-child-views % f)
-                                              lookup)))))
-
-  (render [this id]
-    (dispatch-view this (lookup id)))
-
-  )
-
-
+(defn resolved-view
+  ([{:as root :keys [root-id]}] (resolved-view root root-id))
+  ([{:keys [dispatch-view]} id]
+   (let [f (comp dispatch-view
+                 resolve-child-views
+                 lookup)]
+     (dispatch-view
+      (resolve-child-views (lookup id) (comp dispatch-view
+                                             #(resolve-child-views % f)
+                                             lookup))))))
 
 (defn default-child-view [content]
   (case (meta content)
@@ -192,29 +108,22 @@
      markup (into [:div "Markup: "] markup)
      content [:div "Content: " [default-child-view content]])])
 
-(defn ui-root [opts]
-  (map->UIRoot
-   (merge
-    (multi-dispatch {:dispatch-fn         (:ent->view-name opts)
-                     :add-method-key      :add-view
-                     :remove-method-key   :remove-view
-                     :dispatch-method-key :dispatch-view})
-    opts)))
+(defn ui-root [{:as opts :keys [ent->view-name]}]
+  {:pre [ent->view-name]}
+  (merge
+   (multi-dispatch {:dispatch-fn         (:ent->view-name opts)
+                    :add-method-key      :add-view
+                    :remove-method-key   :remove-view
+                    :dispatch-method-key :dispatch-view
+                    :default-dispatch-fn default-view})
+   opts))
 
 
-(ifn? :ke)
-(defn rrr []
-  (let [root (ui-root {:root-id        1
+(defn rrr [id]
+  (let [root (ui-root {:root-id        id
                        :lookup         lookup
-                       :ent->view-name :type})
-        {:keys [dispatch-view add-view]} root
-        {:as ent :keys [content]} (lookup 1)]
+                       :ent->view-name :type})]
 
-    (add-view :default default-view)
-    (doto (resolved-view root 1)
-      js/console.log)
-    ;ent
-    ;root
-    #_(cond-> ent content (update :content resolve-contentt (comp (fn [x]
-                                                                    [:div x]) lookup)))))
+    (doto (resolved-view root id)
+      js/console.log)))
 
