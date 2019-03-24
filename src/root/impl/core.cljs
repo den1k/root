@@ -7,7 +7,6 @@
 ;; db lookup / transact
 ;; view state: dom node, etc.
 
-
 (def data
   [{:id 1 :type :container :content [2]}
    {:id 2 :type :toggle-list :attrs {:name "Shopping List"} :content {:new-todo 6
@@ -30,11 +29,6 @@
 
 (s/def ::entity (s/keys :req-un [::id] :opt-un [::type ::content ::markup ::attrs]))
 
-(def state (r/atom (into {} (map (fn [x] [(:id x) x])) data)))
-
-(defn id? [x] (integer? x))
-(defn lookup [id] (get @state id))
-
 (defn conform! [spec x]
   (let [ret (s/conform spec x)]
     (if (= ret ::s/invalid)
@@ -45,6 +39,49 @@
                  :explain      (s/explain-str spec x)
                  :explain-data (s/explain-data spec x)}))
       ret)))
+
+(defn make-id-gen [start]
+  (let [current (atom start)]
+    (fn []
+      (swap! current inc))))
+
+(defonce id-gen (make-id-gen 1000))
+
+(defn ->ref [ent]
+  {:pre [(conform! ::entity ent)]}
+  (:id ent))
+
+(defn ref+ent-tuple [ent]
+  [(->ref ent) ent])
+
+(def state (r/atom (into {} (map ref+ent-tuple) data)))
+
+(defn lookup [id] (get @state id))
+
+(defn- ensure-vec [x]
+  (cond-> x (not (vector? x)) vector))
+
+(defmulti run-tx (fn [[op _]] op))
+
+(defmethod run-tx :add
+  [[_ id-or-path ent]]
+  {:pre [(conform! ::entity ent)]}
+  (let [[ref ent :as ref+ent] (ref+ent-tuple ent)]
+    (swap! state
+           (fn [st]
+             (-> st
+                 (update-in (ensure-vec id-or-path)
+                            (fn [x]
+                              (cond
+                                (vector x) (conj x ref)
+                                :else ref)))
+                 (conj ref+ent))))))
+
+
+(defn transact [txs]
+  ;; could return ids for to trigger re-render based on id->views index
+  (doseq [tx txs]
+    (run-tx tx)))
 
 (defn __border [color]
   {:border (str "1px solid " (name color))})
@@ -105,18 +142,19 @@
                            [default-child-view child-or-children]]))
                        content)))
 
-(defn default-view [{:as ent :keys [type markup content]}]
+(defn default-view [{:as ent :keys [id type markup content]}]
   [:div
    {:style (merge (__border :tomato)
                   {:padding    10
                    :margin-top 5})}
+   [:div "id: " id]
    [:div "Type: " (name type)]
    (cond
      markup (into [:div "Markup: "] markup)
      content [:div "Content: " [default-child-view content]])])
 
 (defn ui-root [{:as opts :keys [ent->view-name]}]
-  {:pre [ent->view-name lookup]}
+  {:pre [ent->view-name lookup]}        ;; todo add transact as a required function
   (merge
    (multi-dispatch {:dispatch-fn         (:ent->view-name opts)
                     :add-method-key      :add-view
@@ -131,8 +169,12 @@
 (let [{:keys [add-view]} root]
   (add-view
    :button
-   (fn [{:keys [markup]}]
-     [:button (first markup)])))
+   (fn [{:keys [parent-id markup]}]
+     [:button
+      {:on-click #(transact [[:add
+                              [parent-id :content :todos]
+                              {:id (id-gen) :type :todo-item :markup ["New Todo"]}]])}
+      (first markup)])))
 
 
 (defn test-root [id]
