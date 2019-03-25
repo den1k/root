@@ -59,7 +59,10 @@
 (defn lookup [id] (get @state id))
 
 (defn- ensure-vec [x]
-  (cond-> x (not (vector? x)) vector))
+  (cond
+    (vector? x) x
+    (sequential? x) (vec x)
+    :else [x]))
 
 (defmulti run-tx (fn [[op _]] op))
 
@@ -199,13 +202,22 @@
 
   (add-view
    :todo-item
-   (fn [{:as ent :keys [parent-id markup checked?]}]
-     [:div
+   (fn [{:as ent :keys [parent-id markup checked? active?]}]
+     [:div.flex.items-center.hide-child
       [:input {:type      :checkbox
                :checked   (boolean checked?)
                :on-change #(transact [[:update (update ent :checked? not)]])}]
-      [:label {:style {:padding "0 5px"}} (first markup)]
-      [:button
+
+      (if-not active?
+        [:label {:style    {:padding "0 5px"}
+                 :on-click #(transact [[:update (assoc ent :active? true)]])}
+         (first markup)]
+        [:input {:value      (first markup)
+                 :auto-focus true
+                 :on-blur    #(transact [[:update (assoc ent :active? false)]])
+                 :on-change  #(transact
+                               [[:update (assoc ent :markup [(-> % .-target .-value)])]])}])
+      [:div.dim.light-silver.pointer.f7.child
        {:on-click #(transact [[:remove [parent-id :content :todos] ent]])}
        "remove"]])))
 
