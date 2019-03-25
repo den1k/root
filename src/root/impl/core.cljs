@@ -13,7 +13,7 @@
                                                                       :todos    [3 4 5]}}
    {:id 3 :type :todo-item :markup ["Buy Bananas \uD83C\uDF4C️"]}
    {:id 4 :type :todo-item :markup ["Buy strawberries"]}
-   {:id 5 :type :todo-item :markup ["Buy Cabbage"]}
+   {:id 5 :type :todo-item :checked? true :markup ["Buy Cabbage"]}
    {:id 6 :type :button :markup ["New Todo"]}])
 
 (s/def ::id integer?)
@@ -77,6 +77,27 @@
                                 :else ref)))
                  (conj ref+ent))))))
 
+(defmethod run-tx :remove
+  [[_ id-or-path ent]]
+  {:pre [(conform! ::entity ent)]}
+  (let [ref (->ref ent)]
+    (swap! state
+           (fn [st]
+             (-> st
+                 (update-in (ensure-vec id-or-path)
+                            (fn [x]
+                              (cond
+                                (vector x) (vec (remove (fn [r] (= r ref)) x))
+                                :else nil)))
+                 (dissoc ref))))))
+
+(defmethod run-tx :update
+  [[_ ent]]
+  {:pre [(conform! ::entity ent)]}
+  (let [ref+ent (ref+ent-tuple ent)]
+    (swap! state
+           (fn [st]
+             (-> st (conj ref+ent))))))
 
 (defn transact [txs]
   ;; could return ids for to trigger re-render based on id->views index
@@ -174,7 +195,19 @@
       {:on-click #(transact [[:add
                               [parent-id :content :todos]
                               {:id (id-gen) :type :todo-item :markup ["New Todo"]}]])}
-      (first markup)])))
+      (first markup)]))
+
+  (add-view
+   :todo-item
+   (fn [{:as ent :keys [parent-id markup checked?]}]
+     [:div
+      [:input {:type      :checkbox
+               :checked   (boolean checked?)
+               :on-change #(transact [[:update (update ent :checked? not)]])}]
+      [:label {:style {:padding "0 5px"}} (first markup)]
+      [:button
+       {:on-click #(transact [[:remove [parent-id :content :todos] ent]])}
+       "remove"]])))
 
 
 (defn test-root [id]
