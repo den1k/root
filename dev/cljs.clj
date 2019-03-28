@@ -1,8 +1,11 @@
 (ns cljs
   (:require [shadow.cljs.devtools.api :as shadow]))
 
+(shadow/repl :app)
+
 (comment
- (shadow/repl :app)
+ :cljs/quit
  )
+
 
 

@@ -8,13 +8,16 @@
 ;; view state: dom node, etc.
 
 (def data
-  [{:id 1 :type :container :content [2]}
+  [{:id 1 :type :container :content [10 2]}
    {:id 2 :type :toggle-list :attrs {:name "Shopping List"} :content {:new-todo 6
                                                                       :todos    [3 4 5]}}
    {:id 3 :type :todo-item :markup ["Buy Bananas \uD83C\uDF4C️"]}
    {:id 4 :type :todo-item :markup ["Buy strawberries"]}
    {:id 5 :type :todo-item :checked? true :markup ["Buy Cabbage"]}
-   {:id 6 :type :button :markup ["New Todo"]}])
+   {:id 6 :type :button :markup ["New Todo"]}
+   {:id 10 :content [11 12]}
+   {:id 11 :type :undo-button :markup ["undo"]}
+   {:id 12 :type :redo-button :markup ["redo"]}])
 
 (s/def ::id integer?)
 (s/def ::type keyword?)
@@ -55,8 +58,51 @@
   [(->ref ent) ent])
 
 (def state (r/atom (into {} (map ref+ent-tuple) data)))
+(def history-log (atom {:idx nil :log []}))
 
+(defn op-dispatch [[op _]] op)
 (defn lookup [id] (get @state id))
+
+(defmulti inverted-op op-dispatch)
+
+(defmethod inverted-op :add
+  [[_ id-or-path ent]]
+  [:remove id-or-path ent])
+
+(defmethod inverted-op :remove
+  [[_ id-or-path ent]]
+  [:add id-or-path ent])
+
+(defmethod inverted-op :set
+  [[_ {:as ent :keys [id]}]]
+  [:set (lookup id)])
+
+(defn log-txs [txs]
+  (let [{:keys [log]} @history-log]
+    (swap! history-log assoc
+           :log (conj log (mapv inverted-op txs))
+           :redo-log [])))
+
+(declare transact)
+
+(defn- shift-history [from-key to-key]
+  (let [{from from-key to to-key} @history-log]
+    (when-let [txs (peek from)]
+      (swap! history-log assoc
+             from-key (pop from)
+             to-key (conj to (mapv inverted-op txs)))
+      (transact txs {:history? false}))))
+
+(defn undo []
+  (shift-history :log :redo-log))
+
+(defn redo []
+  (shift-history :redo-log :log))
+
+(comment
+ (undo)
+ (redo)
+ )
 
 (defn- ensure-vec [x]
   (cond
@@ -64,11 +110,10 @@
     (sequential? x) (vec x)
     :else [x]))
 
-(defmulti run-tx (fn [[op _]] op))
+(defmulti run-tx op-dispatch)
 
 (defmethod run-tx :add
   [[_ id-or-path ent]]
-  {:pre [(conform! ::entity ent)]}
   (let [[ref ent :as ref+ent] (ref+ent-tuple ent)]
     (swap! state
            (fn [st]
@@ -82,7 +127,6 @@
 
 (defmethod run-tx :remove
   [[_ id-or-path ent]]
-  {:pre [(conform! ::entity ent)]}
   (let [ref (->ref ent)]
     (swap! state
            (fn [st]
@@ -94,7 +138,7 @@
                                 :else nil)))
                  (dissoc ref))))))
 
-(defmethod run-tx :update
+(defmethod run-tx :set
   [[_ ent]]
   {:pre [(conform! ::entity ent)]}
   (let [ref+ent (ref+ent-tuple ent)]
@@ -102,10 +146,15 @@
            (fn [st]
              (-> st (conj ref+ent))))))
 
-(defn transact [txs]
+(defn transact
+  ([txs]
+   (transact txs {:history? true}))
   ;; could return ids for to trigger re-render based on id->views index
-  (doseq [tx txs]
-    (run-tx tx)))
+  ([txs {:keys [history?]}]
+   (when history?
+     (log-txs txs))
+   (doseq [tx txs]
+     (run-tx tx))))
 
 (defn __border [color]
   {:border (str "1px solid " (name color))})
@@ -172,7 +221,7 @@
                   {:padding    10
                    :margin-top 5})}
    [:div "id: " id]
-   [:div "Type: " (name type)]
+   [:div "Type: " (if type (name type) "[No type]")]
    (cond
      markup (into [:div "Markup: "] markup)
      content [:div "Content: " [default-child-view content]])])
@@ -197,7 +246,22 @@
      [:button
       {:on-click #(transact [[:add
                               [parent-id :content :todos]
-                              {:id (id-gen) :type :todo-item :markup ["New Todo"]}]])}
+                              (let [tid (id-gen)]
+                                {:id tid :type :todo-item :markup [(str "New Todo " tid)]})]])}
+      (first markup)]))
+
+  (add-view
+   :undo-button
+   (fn [{:keys [markup]}]
+     [:button
+      {:on-click #(undo)}
+      (first markup)]))
+
+  (add-view
+   :redo-button
+   (fn [{:keys [markup]}]
+     [:button
+      {:on-click #(redo)}
       (first markup)]))
 
   (add-view
@@ -206,17 +270,19 @@
      [:div.flex.items-center.hide-child
       [:input {:type      :checkbox
                :checked   (boolean checked?)
-               :on-change #(transact [[:update (update ent :checked? not)]])}]
+               :on-change #(transact [[:set (update ent :checked? not)]])}]
 
       (if-not active?
         [:label {:style    {:padding "0 5px"}
-                 :on-click #(transact [[:update (assoc ent :active? true)]])}
+                 :on-click #(transact [[:set (assoc ent :active? true)]]
+                                      {:history? false})}
          (first markup)]
-        [:input {:value      (first markup)
-                 :auto-focus true
-                 :on-blur    #(transact [[:update (assoc ent :active? false)]])
-                 :on-change  #(transact
-                               [[:update (assoc ent :markup [(-> % .-target .-value)])]])}])
+        [:input {:default-value (first markup)
+                 :auto-focus    true
+                 :on-blur       #(let [v (-> % .-target .-value)]
+                                   (when (not= v (first markup))
+                                     (transact [[:set (assoc ent :active? false
+                                                                 :markup [(-> % .-target .-value)])]])))}])
       [:div.dim.light-silver.pointer.f7.child
        {:on-click #(transact [[:remove [parent-id :content :todos] ent]])}
        "remove"]])))
