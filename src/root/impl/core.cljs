@@ -2,7 +2,7 @@
   (:require [medley.core :as md]
             [reagent.core :as r]
             [cljs.spec.alpha :as s]
-            [den1k.shortcuts :refer [shortcuts]]))
+            [den1k.shortcuts :refer [shortcuts global-shortcuts]]))
 
 ;; register/remove views
 ;; db lookup / transact
@@ -17,11 +17,14 @@
    {:id 5 :type :todo-item :checked? true :markup ["Buy Cabbage"]}
    {:id 6 :type :button :markup ["New Todo"] :handlers {:on-click [:todo-item :add]}}
    {:id 10 :content [11 12]}
-   {:id 11 :type :button :markup ["undo"] :handlers {:on-click [[:undo]]}}
-   {:id 12 :type :button :markup ["redo"] :handlers {:on-click [[:redo]]}}])
+   {:id 11 :type :button :markup ["undo"] :handlers {:on-click [:global :undo]}}
+   {:id 12 :type :button :markup ["redo"] :handlers {:on-click [:global :redo]}}])
 
 (def entity-actions
-  {:todo-item
+  {:global
+   {:undo [[:undo]]
+    :redo [[:redo]]}
+   :todo-item
    {:add            [[:add
                       [:<- :content :todos]
                       {:type :todo-item :active? true :markup ["New Todo"]}]]
@@ -52,7 +55,7 @@
                  :explain-data (s/explain-data spec x)}))
       ret)))
 
-(defn check [spec x]
+(defn is? [x spec]
   (not= (s/conform spec x) ::s/invalid))
 
 (defn make-id-gen [start]
@@ -150,7 +153,7 @@
                  (update-in path
                             (fn [x]
                               (cond
-                                (check ::refs x)
+                                (is? x ::refs)
                                 (vec (remove (fn [r] (= r ref)) x))
                                 :else nil)))
                  (dissoc ref))))))
@@ -158,7 +161,7 @@
 (defmethod run-tx :set
   [{:keys [path ent]}]
   (conform! ::entity ent)
-  (let [ref+ent (ref+ent-tuple ent)]
+  (let [ref+ent (ref+ent-tuple (dissoc ent :actions :handlers))]
     (swap! state
            (fn [st]
              (-> st (conj ref+ent))))))
@@ -241,14 +244,14 @@
              (fn [actions-or-path]
                (fn []
                  (transact
-                  (mapv (fn [[op id-or-path new-ent :as tx]]
+                  (mapv (fn [[op id-or-path new-ent]]
                           [op (->> id-or-path
                                    ensure-vec
                                    (mapv #(if (= :<- %)
                                             parent-id
                                             %)))
                            (if-not new-ent
-                             (dissoc ent :parent-id)
+                             ent
                              (cond-> new-ent
                                (nil? (:id new-ent))
                                (assoc :id (id-gen))))])
@@ -309,29 +312,22 @@
 (def root (ui-root {:lookup         lookup
                     :ent->view-name (fn [x] (or (:view x) (:type x)))}))
 
+;; not great because this is an implementation detail instead
+;; a spec of the behavior – also not using transactions
+(global-shortcuts {"cmd+z"       #(undo)
+                   "cmd+shift+z" #(redo)})
+
 (let [{:keys [add-view]} root]
+
   (add-view
    :button
    (fn [{:keys [markup handlers]}]
      [:button handlers (first markup)]))
 
   (add-view
-   :undo-button
-   (fn [{:keys [markup]}]
-     [:button
-      {:on-click #(undo)}
-      (first markup)]))
-
-  (add-view
-   :redo-button
-   (fn [{:keys [markup]}]
-     [:button
-      {:on-click #(redo)}
-      (first markup)]))
-
-  (add-view
    :todo-item
-   (fn [{:as                             ent :keys [id parent-id markup checked? active? actions]
+   (fn [{:as                             ent
+         :keys                           [id parent-id markup checked? active? actions]
          {:keys [toggle-checked remove]} :actions}]
      [:div.flex.items-center.hide-child
       [:input {:type      :checkbox
@@ -343,13 +339,15 @@
                  :on-click #(transact [[:set (assoc ent :active? true)]]
                                       {:history? false})}
          (str (first markup) " " id)]
-        [:input {:default-value (first markup)
-                 :auto-focus    true
-                 :on-blur       #(let [v (-> % .-target .-value)]
-                                   (transact
-                                    [[:set (assoc ent :active? false
-                                                      :markup [v])]]
-                                    {:history? (not= v (first markup))}))}])
+        [:input (merge
+                 (shortcuts {"enter" #(-> % .-target .blur)})
+                 {:default-value (first markup)
+                  :auto-focus    true
+                  :on-blur       #(let [v (-> % .-target .-value)]
+                                    (transact
+                                     [[:set (assoc ent :active? false
+                                                       :markup [v])]]
+                                     {:history? (not= v (first markup))}))})])
       [:div.dim.light-silver.pointer.f7.child
        {:on-click remove}
        "remove"]])))
