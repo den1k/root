@@ -8,29 +8,6 @@
 ;; db lookup / transact
 ;; view state: dom node, etc.
 
-(def data
-  [{:id 1 :type :container :content [10 2]}
-   {:id 2 :type :todo-list :view :toggle-list :attrs {:name "Shopping List"} :content {:new-todo 6
-                                                                                       :todos    [3 4 5]}}
-   {:id 3 :type :todo-item :markup ["Buy Bananas \uD83C\uDF4C️"]}
-   {:id 4 :type :todo-item :markup ["Buy strawberries"]}
-   {:id 5 :type :todo-item :checked? true :markup ["Buy Cabbage"]}
-   {:id 6 :type :button :markup ["New Todo"] :handlers {:on-click [:todo-item :add]}}
-   {:id 10 :content [11 12]}
-   {:id 11 :type :button :markup ["undo"] :handlers {:on-click [:global :undo]}}
-   {:id 12 :type :button :markup ["redo"] :handlers {:on-click [:global :redo]}}])
-
-(def entity-actions
-  {:global
-   {:undo [[:undo]]
-    :redo [[:redo]]}
-   :todo-item
-   {:add            [[:add
-                      [:<- :content :todos]
-                      {:type :todo-item :active? true :markup ["New Todo"]}]]
-    :remove         [[:remove [:<- :content :todos]]]
-    :toggle-checked [[:toggle :checked?]]}})
-
 (s/def ::id integer?)
 (s/def ::type keyword?)
 (s/def ::markup (s/coll-of string?))
@@ -72,11 +49,37 @@
 (defn ref+ent-tuple [ent]
   [(->ref ent) ent])
 
+(def data
+  [{:id 1 :type :container :content [10 2]}
+   {:id      2 :type :todo-list :view :toggle-list :markup ["Shopping List"]
+    :open?   true
+    :content [6 3 4 5]}
+   {:id 3 :type :todo-item :markup ["Buy Bananas \uD83C\uDF4C️"]}
+   {:id 4 :type :todo-item :markup ["Buy strawberries"]}
+   {:id 5 :type :todo-item :checked? true :markup ["Buy Cabbage"]}
+   {:id 6 :type :button :markup ["New Todo"] :handlers {:on-click [:todo-item :add]}}
+   {:id 10 :content [11 12]}
+   {:id 11 :type :button :markup ["undo"] :handlers {:on-click [:global :undo]}}
+   {:id 12 :type :button :markup ["redo"] :handlers {:on-click [:global :redo]}}])
+
 (def state (r/atom (into {} (map ref+ent-tuple) data)))
+(defn lookup [id] (get @state id))
+
+(def entity-actions
+  {:global
+        {:undo [[:undo]]
+         :redo [[:redo]]}
+   :todo-item
+        {:add            [[:add
+                           [:<- :content]
+                           {:type :todo-item :active? true :markup ["New Todo"]}]]
+         :remove         [[:remove [:<- :content]]]
+         :toggle-checked [[:toggle :checked?]]}})
+
+
 (def history-log (atom {:idx nil :log []}))
 
 (defn op-dispatch [[op _]] op)
-(defn lookup [id] (get @state id))
 
 (defmulti inverted-op op-dispatch)
 
@@ -160,18 +163,19 @@
 
 (defmethod run-tx :set
   [{:keys [path ent]}]
-  (conform! ::entity ent)
   (let [ref+ent (ref+ent-tuple (dissoc ent :actions :handlers))]
+    (js/console.log :SET path ent)
     (swap! state
            (fn [st]
              (-> st (conj ref+ent))))))
 
 (s/def ::op-path
-  (s/conformer
-   (fn [x]
-     (if (keyword? x)
-       [x]
-       (and (vector? x) (not-empty x))))))
+  (s/and #(or (keyword? %) (vector? %))
+         (s/conformer
+          (fn [x]
+            (if (keyword? x)
+              [x]
+              (and (vector? x) (not-empty x)))))))
 
 (s/def ::tx
   (s/cat :op keyword?
@@ -196,6 +200,7 @@
    (when history?
      (log-txs txs))
    (doseq [tx txs]
+     (js/console.log :TX tx)
      (->> tx
           (conform! ::tx)
           run-tx))))
@@ -245,18 +250,23 @@
                (fn []
                  (transact
                   (mapv (fn [[op id-or-path new-ent]]
-                          [op (->> id-or-path
-                                   ensure-vec
-                                   (mapv #(if (= :<- %)
-                                            parent-id
-                                            %)))
-                           (if-not new-ent
-                             ent
-                             (cond-> new-ent
-                               (nil? (:id new-ent))
-                               (assoc :id (id-gen))))])
-                        (cond->> actions-or-path
-                          path? (get-in entity-actions))))))
+                          (let [ent? (is? id-or-path ::entity)]
+                            (cond-> [op (if ent?
+                                          id-or-path
+                                          (->> id-or-path
+                                               ensure-vec
+                                               (mapv #(if (= :<- %)
+                                                        parent-id
+                                                        %))))]
+                              (not ent?) (conj (if-not new-ent
+                                                 ent
+                                                 (cond-> new-ent
+                                                   (nil? (:id new-ent))
+                                                   (assoc :id (id-gen))))))))
+                        (do (when (= :nav type)
+                              (js/console.log :ACTpath path? actions-or-path))
+                            (cond->> actions-or-path
+                              path? (get-in entity-actions)))))))
              actions-map))]
     (let [ent-actions (some-> (get entity-actions type) (wrap false))]
       (cond-> ent
@@ -325,6 +335,27 @@
      [:button handlers (first markup)]))
 
   (add-view
+   :toggle-list
+   (fn [{:as ent :keys [markup content open?]}]
+     (cond-> [:div
+              [:div.flex.items-center
+               [:div
+                {:style {:padding 5}}
+                [:div
+                 {:style    (merge
+                             {:font-size   12
+                              :line-height 1
+                              :user-select :none
+                              :cursor      :pointer}
+                             (when open?
+                               {:transform        "rotate(90deg)"
+                                :transform-origin :center}))
+                  :on-click #(transact [[:toggle :open? (lookup (:id ent))]])}
+                 "▶"]]
+               (first markup)]]
+       open? (into content))))
+
+  (add-view
    :todo-item
    (fn [{:as                             ent
          :keys                           [id parent-id markup checked? active? actions]
@@ -348,12 +379,19 @@
                                      [[:set (assoc ent :active? false
                                                        :markup [v])]]
                                      {:history? (not= v (first markup))}))})])
-      [:div.dim.light-silver.pointer.f7.child
-       {:on-click remove}
-       "remove"]])))
+      [:div.flex.dim.light-silver.pointer.f7.child
+       [:div
+        {:on-click remove}
+        "remove"]
+       (into [:select {:on-change #(let [opt-kw (-> % .-target .-value keyword)]
+                                     (transact [[:set (assoc ent :type opt-kw)]]))}]
+             (map (fn [x]
+                    (let [opt-kw (keyword x)]
+                      [:option {:value x #_(= opt-kw type)} x])))
+             ["todo-item" "toggle-list"])]])))
 
 
 (defn test-root [id]
   (doto (resolved-view root id)
-    js/console.log))
+    #_js/console.log))
 
