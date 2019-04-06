@@ -19,17 +19,19 @@
 
 (s/def ::attrs map?)
 
+(s/def ::partial-entity (s/keys :opt-un [::id ::type ::content ::markup ::attrs]))
 (s/def ::entity (s/keys :req-un [::id] :opt-un [::type ::content ::markup ::attrs]))
 
 (defn conform! [spec x]
   (let [ret (s/conform spec x)]
     (if (= ret ::s/invalid)
-      (throw
-       (ex-info "Value doesn't match spec"
-                {:value        x
-                 :spec         spec
-                 :explain      (s/explain-str spec x)
-                 :explain-data (s/explain-data spec x)}))
+      (do
+        (js/console.error (s/explain-str spec x))
+        (throw
+         (ex-info "Value doesn't match spec"
+                  {:value        x
+                   :spec         spec
+                   :explain-data (s/explain-data spec x)})))
       ret)))
 
 (defn is? [x spec]
@@ -67,14 +69,14 @@
 
 (def entity-actions
   {:global
-        {:undo [[:undo]]
-         :redo [[:redo]]}
+   {:undo [[:undo]]
+    :redo [[:redo]]}
    :todo-item
-        {:add            [[:add
-                           [:<- :content]
-                           {:type :todo-item :active? true :markup ["New Todo"]}]]
-         :remove         [[:remove [:<- :content]]]
-         :toggle-checked [[:toggle :checked?]]}})
+   {:add            [[:add
+                      [:<- :content]
+                      {:type :todo-item :active? true :markup ["New Todo"]}]]
+    :remove         [[:remove [:<- :content]]]
+    :toggle-checked [[:toggle :checked?]]}})
 
 
 (def history-log (atom {:idx nil :log []}))
@@ -164,7 +166,6 @@
 (defmethod run-tx :set
   [{:keys [path ent]}]
   (let [ref+ent (ref+ent-tuple (dissoc ent :actions :handlers))]
-    (js/console.log :SET path ent)
     (swap! state
            (fn [st]
              (-> st (conj ref+ent))))))
@@ -181,6 +182,15 @@
   (s/cat :op keyword?
          :path (s/? ::op-path)
          :ent ::entity))
+
+(s/def ::txs (s/coll-of ::tx))
+
+(s/def ::partial-tx
+  (s/cat :op keyword?
+         :path (s/? ::op-path)
+         :ent (s/? ::partial-entity)))
+
+(s/def ::partial-txs (s/coll-of ::partial-tx))
 
 
 (defmethod run-tx :toggle
@@ -200,7 +210,6 @@
    (when history?
      (log-txs txs))
    (doseq [tx txs]
-     (js/console.log :TX tx)
      (->> tx
           (conform! ::tx)
           run-tx))))
@@ -243,36 +252,44 @@
   ([{:as ent :keys [content]} f]
    (cond-> ent content (update :content resolve-content f))))
 
-(defn wrap-actions-and-handlers [{:as ent :keys [type actions handlers parent-id]}]
-  (letfn [(wrap [actions-map path?]
+
+(s/def ::txs-path (s/coll-of keyword?))
+
+(s/def ::partial-txs-or-txs-path
+  (s/or :partial-txs ::partial-txs
+        :path ::txs-path))
+
+(defn wrap-actions-and-handlers [{:as orig-ent :keys [type actions handlers parent-id]}]
+  (letfn [(resolve-txs [conformed txs-or-txs-path]
+            (case (first conformed)
+              :partial-txs txs-or-txs-path
+              :path (get-in entity-actions txs-or-txs-path)))
+          (form-tx [tx]
+            (let [{:keys [op path ent]} (conform! ::partial-tx tx)]
+              (cond-> [op]
+                path (conj (mapv #(if (= :<- %)
+                                    parent-id
+                                    %) path))
+                ent (conj (cond-> ent (nil? (:id ent)) (assoc :id (id-gen))))
+                (not ent) (conj orig-ent))))
+          (form-txs [txs]
+            (mapv form-tx txs))
+          (wrap [actions-map]
             (md/map-vals
-             (fn [actions-or-path]
+             (fn [txs-or-path]
                (fn []
-                 (transact
-                  (mapv (fn [[op id-or-path new-ent]]
-                          (let [ent? (is? id-or-path ::entity)]
-                            (cond-> [op (if ent?
-                                          id-or-path
-                                          (->> id-or-path
-                                               ensure-vec
-                                               (mapv #(if (= :<- %)
-                                                        parent-id
-                                                        %))))]
-                              (not ent?) (conj (if-not new-ent
-                                                 ent
-                                                 (cond-> new-ent
-                                                   (nil? (:id new-ent))
-                                                   (assoc :id (id-gen))))))))
-                        (do (when (= :nav type)
-                              (js/console.log :ACTpath path? actions-or-path))
-                            (cond->> actions-or-path
-                              path? (get-in entity-actions)))))))
+                 (let [txs-or-path-conformed
+                       (conform! ::partial-txs-or-txs-path txs-or-path)]
+                   (->> txs-or-path
+                        (resolve-txs txs-or-path-conformed)
+                        form-txs
+                        transact))))
              actions-map))]
-    (let [ent-actions (some-> (get entity-actions type) (wrap false))]
-      (cond-> ent
-        ent-actions (assoc :actions ent-actions)
-        actions (update :actions merge (wrap actions true))
-        handlers (assoc :handlers (wrap handlers true))))))
+    (cond-> orig-ent
+      true (assoc :actions (merge (wrap (get entity-actions type))
+                                  (wrap actions)))
+      actions (update :actions merge (wrap actions))
+      handlers (assoc :handlers (wrap handlers)))))
 
 (defn resolved-view
   ([{:as root :keys [root-id]}] (resolved-view root root-id nil))
