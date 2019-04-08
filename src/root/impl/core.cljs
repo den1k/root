@@ -45,7 +45,6 @@
 (defonce id-gen (make-id-gen 1000))
 
 (defn ->ref [ent]
-  (conform! ::entity ent)
   (:id ent))
 
 (defn ref+ent-tuple [ent]
