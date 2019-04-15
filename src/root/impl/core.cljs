@@ -51,7 +51,7 @@
   [(->ref ent) ent])
 
 (def data
-  [{:id 1 :type :container :content [10 2]}
+  [{:id 1 :type :container :content [10 2 200]}
    {:id      2 :type :todo-list :view :toggle-list :markup ["Shopping List"]
     :open?   true
     :content [6 3 4 5]}
@@ -61,7 +61,13 @@
    {:id 6 :type :button :markup ["New Todo"] :handlers {:on-click [:todo-item :add]}}
    {:id 10 :content [11 12]}
    {:id 11 :type :button :markup ["undo"] :handlers {:on-click [:global :undo]}}
-   {:id 12 :type :button :markup ["redo"] :handlers {:on-click [:global :redo]}}])
+   {:id 12 :type :button :markup ["redo"] :handlers {:on-click [:global :redo]}}
+
+   {:id      200 :type :todo-list :view :toggle-list2 :markup ["Shopping List"]
+    :open?   true
+    :content {:button 6
+              :items  [3 4 5]}}
+   ])
 
 (def state (r/atom (into {} (map ref+ent-tuple) data)))
 (defn lookup [id] (get @state id))
@@ -130,6 +136,7 @@
 (defn- ensure-vec [x]
   (cond
     (vector? x) x
+    (nil? x) []
     (sequential? x) (vec x)
     :else [x]))
 
@@ -148,17 +155,35 @@
                                 :else ref)))
                  (conj ref+ent))))))
 
+(defn pluck-vec [seq & idxs]
+  (if-not idxs
+    seq
+    (let [idxs (set idxs)]
+      (into (empty seq)
+            (comp
+             (map-indexed vector)
+             (keep (fn [[idx i]]
+                     (when (not (contains? idxs idx)) i))))
+            seq))))
+
+(defn plop-vec [seq idx item]
+  (vec (concat (take idx seq) [item] (drop idx seq))))
+
+
+
 (defmethod run-tx :remove
-  [{:keys [path ent]}]
-  (let [ref (->ref ent)]
+  [{:keys [path ent]}]                  ;; todo clean path
+  (let [ref      (->ref ent)
+        ent-path (:path ent)]
     (swap! state
            (fn [st]
              (-> st
-                 (update-in path
+                 ;; todo either tag type of path in meta or provide full path
+                 (update-in (conj (plop-vec (butlast ent-path) 1 :content))
                             (fn [x]
                               (cond
                                 (is? x ::refs)
-                                (vec (remove (fn [r] (= r ref)) x))
+                                (pluck-vec x (last ent-path))
                                 :else nil)))
                  (dissoc ref))))))
 
@@ -242,9 +267,21 @@
   ([content f]
    (let [[type refs*] (conform! ::content content)]
      (case type
-       :ref (with-meta (f refs*) ::entity)
-       :refs (with-meta (mapv f refs*) ::entities)
-       :refs-map (with-meta (md/map-vals #(resolve-content % f) content) ::entity-map)))))
+       :ref (with-meta (f {:id refs*}) ::entity)
+       :refs (with-meta (vec (map-indexed (fn [k ref]
+                                            (f {:k  k
+                                                :id ref})) refs*)) ::entities)
+       :refs-map (with-meta
+                  (reduce-kv (fn [out k v]
+                               (assoc out k (resolve-content
+                                             v
+                                             (comp
+                                              f
+                                              (fn [{:as x next-key :k}]
+                                                (cond-> x
+                                                  next-key (assoc :k [k next-key])))))))
+                             {}
+                             content) ::entity-map)))))
 
 (defn resolve-child-views
   ([ent] (resolve-child-views ent identity))
@@ -291,14 +328,19 @@
       handlers (assoc :handlers (wrap handlers)))))
 
 (defn resolved-view
-  ([{:as root :keys [root-id]}] (resolved-view root root-id nil))
-  ([root id] (resolved-view root id nil))
-  ([{:as root :keys [dispatch-view lookup]} id parent-id]
-   (-> id
+  ([{:as root :keys [root-id]}] (resolved-view root {:root-id root-id}))
+  ([{:as root :keys [dispatch-view lookup]} {:keys [root-id parent-id path]}]
+   (-> root-id
        lookup
        (cond-> parent-id (assoc :parent-id parent-id))
+       (cond-> path (assoc :path path))
        wrap-actions-and-handlers
-       (resolve-child-views #(resolved-view root % id))
+       (resolve-child-views
+        (fn [{:keys [k id]}]
+          (resolved-view root
+                         {:root-id   id
+                          :path      (some-> root-id ensure-vec (into (ensure-vec k)))
+                          :parent-id root-id})))
        dispatch-view)))
 
 (defn default-child-view [content]
@@ -321,9 +363,8 @@
    [:div "Type: " (if type (name type) "[No type]")]
    (when view
      [:div "View: " (name view)])
-   (cond
-     markup (into [:div "Markup: "] markup)
-     content [:div "Content: " [default-child-view content]])])
+   (when markup (into [:div "Markup: "] markup))
+   (when content [:div "Content: " [default-child-view content]])])
 
 (defn ui-root [{:as opts :keys [ent->view-name]}]
   {:pre [ent->view-name lookup]}        ;; todo add transact as a required function
@@ -408,6 +449,6 @@
 
 
 (defn test-root [id]
-  (doto (resolved-view root id)
+  (doto (resolved-view root {:root-id id})
     #_js/console.log))
 
