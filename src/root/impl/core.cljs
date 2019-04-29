@@ -255,6 +255,24 @@
      [:button handlers (first markup)]))
 
   (add-view
+   :nav
+   (fn [{:as ent :keys [content routes]}]
+     [:div
+      [:nav
+       {:class "db dt-l w-100 border-box pa3 ph5-l"}
+       (into
+        [:div {:class "db dtc-l v-mid w-100 w-75-l tc tr-l"}]
+        (map
+         (fn [[k v]]
+           [:a
+            {:href     "#"
+             :class    "link dim dark-gray f6 f5-l dib mr3 mr4-l"
+             :on-click #(transact [[:set (assoc ent :content v)]])}
+            (name k)]))
+        routes)]
+      content]))
+
+  (add-view
    :toggle-list
    (fn [{:as ent :keys [markup content open?]}]
      (cond-> [:div

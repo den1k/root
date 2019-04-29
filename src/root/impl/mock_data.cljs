@@ -1,7 +1,10 @@
 (ns root.impl.mock-data)
 
 (def data
-  [{:id 1 :type :container :content [10 2 200]}
+  [{:id 1 :type :container :content [103]}
+   {:id 103 :type :nav :routes {:home 101 :about 102} :content 101}
+   {:id 101 :type :home :content [10 2 200]}
+   {:id 102 :type :about :markup ["OTHER STUFF"]}
    {:id      2 :type :todo-list :view :toggle-list :markup ["Shopping List"]
     :open?   true
     :content [6 3 4 5]}
