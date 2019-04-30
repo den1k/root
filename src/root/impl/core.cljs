@@ -127,7 +127,7 @@
                             (fn [x]
                               (cond
                                 (s/valid? ::ent/refs x)
-                                (into [] (remove #(= % (ent->ref ent))) x)
+                                (into [] (remove #(= % ref)) x)
                                 :else nil)))
                  (dissoc ref))))))
 
@@ -252,7 +252,9 @@
   (add-view
    :button
    (fn [{:keys [markup handlers]}]
-     [:button handlers (first markup)]))
+     [:button (merge
+               {:class "f6 link dim br2 ba ph2 pv1 dib black"}
+               handlers) (first markup)]))
 
   (add-view
    :nav
@@ -266,7 +268,7 @@
          (fn [[k v]]
            [:a
             {:href     "#"
-             :class    "link dim dark-gray f6 f5-l dib mr3 mr4-l"
+             :class    "link dim dark-gray f6 f5-l dib mr3 mr4-l fw5"
              :on-click #(transact [[:set (assoc ent :content v)]])}
             (name k)]))
         routes)]
