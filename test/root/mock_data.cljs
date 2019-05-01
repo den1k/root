@@ -3,6 +3,7 @@
             [root.impl.mock-data :as md]))
 
 (def id-gen (u/make-id-gen 1000))
+(defn add-id [ent] (assoc ent :id (id-gen)))
 
 (def data
   ; use hardcoded same data for now

@@ -59,7 +59,7 @@
 
 (defn wrap-actions-and-handlers
   [{:as orig-ent :keys [type actions handlers parent-id]}
-   {:as root :keys [transact entity-actions id-gen]}]
+   {:as root :keys [transact entity-actions add-id]}]
   (letfn [(resolve-txs [conformed txs-or-txs-path]
             (case (first conformed)
               :partial-txs txs-or-txs-path
@@ -68,7 +68,7 @@
             (let [{:keys [op path ent]} (u/conform! ::partial-tx tx)]
               (cond-> [op]
                 path (conj (replace {:<- parent-id} path))
-                ent (conj (cond-> ent (nil? (:id ent)) (assoc :id (id-gen))))
+                ent (conj (cond-> ent (nil? (:id ent)) add-id))
                 (not ent) (conj orig-ent))))
           (form-txs [txs]
             (mapv form-tx txs))
@@ -91,7 +91,7 @@
 
 (defn resolved-view
   ([{:as root :keys [root-id]}] (resolved-view root {:root-id root-id}))
-  ([{:as root :keys [dispatch-view lookup]} {:keys [root-id parent-id path]}]
+  ([{:as root :keys [lookup]} {:keys [root-id parent-id path]}]
    (-> root-id
        lookup
        (cond-> parent-id (assoc :parent-id parent-id))
@@ -106,4 +106,4 @@
                            root-id (assoc :path
                                           (into [root-id :content]
                                                 (u/ensure-vec ent-path)))))))
-       dispatch-view)))
+       root)))

@@ -4,11 +4,13 @@
             [cljs.spec.alpha :as s]
             [root.impl.mock-data :as mock]
             [den1k.shortcuts :refer [shortcuts global-shortcuts]]
+            [root.impl.multi :as multi]
             [root.impl.resolver :as rr]
             [root.impl.entity :as ent]
             [root.impl.util :as u]))
 
 (defonce id-gen (u/make-id-gen 1000))
+(defn add-id [ent] (assoc ent :id (id-gen)))
 
 (defn ent->ref [ent]
   (:id ent))
@@ -222,113 +224,117 @@
    (when markup (into [:div "Markup: "] markup))
    (when content [:div "Content: " [default-child-view content]])])
 
+(defrecord UIRoot [add-method remove-method dispatch-fn method-table]
+  IFn
+  (-invoke [_ x]
+    (dispatch-fn x))
+  IMultiFn
+  (-add-method [_ dispatch-val f]
+    (add-method dispatch-val f))
+  (-remove-method [_ dispatch-val]
+    (remove-method dispatch-val))
+  (-methods [_] @method-table))
+
 (defn ui-root
   [{:as   opts
-    :keys [ent->ref ent->view-name lookup transact entity-actions id-gen]}]
+    :keys [ent->ref ent->view-name lookup transact entity-actions add-id]}]
   {:pre [ent->view-name lookup ent->ref
-         transact entity-actions id-gen]} ;; todo add transact as a required function
-  (merge
-   (multi-dispatch {:dispatch-fn         (:ent->view-name opts)
-                    :add-method-key      :add-view
-                    :remove-method-key   :remove-view
-                    :dispatch-method-key :dispatch-view
-                    :default-dispatch-fn default-view})
-   opts))
+         transact entity-actions add-id]} ;; todo add transact as a required function
+  (map->UIRoot
+   (merge
+    (multi/multi-dispatch
+     {:dispatch-fn         ent->view-name
+      :default-dispatch-fn default-view})
+    opts)))
 
 (def root (ui-root {:ent->ref       ent->ref
                     :lookup         lookup
                     :ent->view-name (fn [x] (or (:view x) (:type x)))
                     :transact       transact
                     :entity-actions entity-actions
-                    :id-gen         id-gen}))
+                    :add-id         add-id}))
 
 ;; not great because this is an implementation detail instead
 ;; a spec of the behavior – also not using transactions
 (global-shortcuts {"cmd+z"       #(undo)
                    "cmd+shift+z" #(redo)})
 
-(let [{:keys [add-view]} root]
+(defmethod root :button
+  [{:keys [markup handlers]}]
+  [:button (merge
+            {:class "f6 link dim br2 ba ph2 pv1 dib black"}
+            handlers) (first markup)])
 
-  (add-view
-   :button
-   (fn [{:keys [markup handlers]}]
-     [:button (merge
-               {:class "f6 link dim br2 ba ph2 pv1 dib black"}
-               handlers) (first markup)]))
+(defmethod root :toggle-list
+  [{:as ent :keys [markup content open?]}]
+  (cond-> [:div
+           [:div.flex.items-center
+            [:div
+             {:style {:padding 5}}
+             [:div
+              {:style    (merge
+                          {:font-size   12
+                           :line-height 1
+                           :user-select :none
+                           :cursor      :pointer}
+                          (when open?
+                            {:transform        "rotate(90deg)"
+                             :transform-origin :center}))
+               :on-click #(transact [[:toggle :open? (lookup (:id ent))]])}
+              "▶"]]
+            (first markup)]]
+    open? (into content)))
 
-  (add-view
-   :nav
-   (fn [{:as ent :keys [content routes]}]
-     [:div
-      [:nav
-       {:class "db dt-l w-100 border-box pa3 ph5-l"}
-       (into
-        [:div {:class "db dtc-l v-mid w-100 w-75-l tc tr-l"}]
-        (map
-         (fn [[k v]]
-           [:a
-            {:href     "#"
-             :class    "link dim dark-gray f6 f5-l dib mr3 mr4-l fw5"
-             :on-click #(transact [[:set (assoc ent :content v)]])}
-            (name k)]))
-        routes)]
-      content]))
+(defmethod root :nav
+  [{:as ent :keys [content routes]}]
+  [:div
+   [:nav
+    {:class "db dt-l w-100 border-box pa3 ph5-l"}
+    (into
+     [:div {:class "db dtc-l v-mid w-100 w-75-l tc tr-l"}]
+     (map
+      (fn [[k v]]
+        [:a
+         {:href     "#"
+          :class    "link dim dark-gray f6 f5-l dib mr3 mr4-l fw5"
+          :on-click #(transact [[:set (assoc ent :content v)]])}
+         (name k)]))
+     routes)]
+   content])
 
-  (add-view
-   :toggle-list
-   (fn [{:as ent :keys [markup content open?]}]
-     (cond-> [:div
-              [:div.flex.items-center
-               [:div
-                {:style {:padding 5}}
-                [:div
-                 {:style    (merge
-                             {:font-size   12
-                              :line-height 1
-                              :user-select :none
-                              :cursor      :pointer}
-                             (when open?
-                               {:transform        "rotate(90deg)"
-                                :transform-origin :center}))
-                  :on-click #(transact [[:toggle :open? (lookup (:id ent))]])}
-                 "▶"]]
-               (first markup)]]
-       open? (into content))))
+(defmethod root :todo-item
+  [{:as                             ent
+    :keys                           [id parent-id markup checked? active? actions]
+    {:keys [toggle-checked remove]} :actions}]
+  [:div.flex.items-center.hide-child
+   [:input {:type      :checkbox
+            :checked   (boolean checked?)
+            :on-change toggle-checked}]
 
-  (add-view
-   :todo-item
-   (fn [{:as                             ent
-         :keys                           [id parent-id markup checked? active? actions]
-         {:keys [toggle-checked remove]} :actions}]
-     [:div.flex.items-center.hide-child
-      [:input {:type      :checkbox
-               :checked   (boolean checked?)
-               :on-change toggle-checked}]
-
-      (if-not active?
-        [:label {:style    {:padding "0 5px"}
-                 :on-click #(transact [[:set (assoc ent :active? true)]]
-                                      {:history? false})}
-         (str (first markup) " " id)]
-        [:input (merge
-                 (shortcuts {"enter" #(-> % .-target .blur)})
-                 {:default-value (first markup)
-                  :auto-focus    true
-                  :on-blur       #(let [v (-> % .-target .-value)]
-                                    (transact
-                                     [[:set (assoc ent :active? false
-                                                       :markup [v])]]
-                                     {:history? (not= v (first markup))}))})])
-      [:div.flex.dim.light-silver.pointer.f7.child
-       [:div
-        {:on-click remove}
-        "remove"]
-       (into [:select {:on-change #(let [opt-kw (-> % .-target .-value keyword)]
-                                     (transact [[:set (assoc ent :type opt-kw)]]))}]
-             (map (fn [x]
-                    (let [opt-kw (keyword x)]
-                      [:option {:value x #_(= opt-kw type)} x])))
-             ["todo-item" "toggle-list"])]])))
+   (if-not active?
+     [:label {:style    {:padding "0 5px"}
+              :on-click #(transact [[:set (assoc ent :active? true)]]
+                                   {:history? false})}
+      (str (first markup) " " id)]
+     [:input (merge
+              (shortcuts {"enter" #(-> % .-target .blur)})
+              {:default-value (first markup)
+               :auto-focus    true
+               :on-blur       #(let [v (-> % .-target .-value)]
+                                 (transact
+                                  [[:set (assoc ent :active? false
+                                                    :markup [v])]]
+                                  {:history? (not= v (first markup))}))})])
+   [:div.flex.dim.light-silver.pointer.f7.child
+    [:div
+     {:on-click remove}
+     "remove"]
+    (into [:select {:on-change #(let [opt-kw (-> % .-target .-value keyword)]
+                                  (transact [[:set (assoc ent :type opt-kw)]]))}]
+          (map (fn [x]
+                 (let [opt-kw (keyword x)]
+                   [:option {:value x #_(= opt-kw type)} x])))
+          ["todo-item" "toggle-list"])]])
 
 
 (defn test-root [id]

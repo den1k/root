@@ -1,6 +1,6 @@
 (ns root.impl.resolver-test
   (:require
-   [clojure.test :refer [deftest is are testing]]
+   [clojure.test :refer [deftest is are testing use-fixtures]]
    [root.impl.core :as rc]
    [root.impl.resolver :as rr]
    [root.mock-data :as mock]))
@@ -14,7 +14,16 @@
     :dispatch-view  identity
     :transact       (constantly ::transacted)
     :entity-actions mock/entity-actions
-    :id-gen         mock/id-gen}))
+    :add-id         mock/add-id}))
+
+;; override dispatch for test
+
+(use-fixtures :once
+              (fn [t]
+                (extend-type rc/UIRoot
+                  IFn
+                  (-invoke ([_ x] x)))
+                (t)))
 
 (deftest reolver-test
   (let [resolved-10        {:id      10,
