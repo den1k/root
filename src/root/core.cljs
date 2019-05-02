@@ -1,6 +1,6 @@
 (ns root.core
   (:require [reagent.core :as reagent :refer [atom]]
-            [root.impl.core :as root]))
+            [root.views :refer [test-root]]))
 
 ;; define your app data so that it doesn't get over-written on reload
 
@@ -12,7 +12,7 @@
    [:h3 "Edit this and watch it change!"]])
 
 (defn start []
-  (reagent/render-component [root/test-root 1]
+  (reagent/render-component [test-root 1]
                             (. js/document (getElementById "app"))))
 
 (defn ^:export init []
