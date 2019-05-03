@@ -1,7 +1,9 @@
 (ns root.views
   (:require [root.impl.resolver :as rr]
             [root.impl.core :as rc]
-            [den1k.shortcuts :refer [shortcuts global-shortcuts]]))
+            [den1k.shortcuts :refer [shortcuts global-shortcuts]]
+            [root.util.dom :as ud]
+            [root.util.string :as ustr]))
 
 (def root (rc/ui-root
            {:ent->ref       rc/ent->ref
@@ -18,9 +20,8 @@
 
 (defmethod root :button
   [{:keys [markup handlers]}]
-  [:button (merge
-            {:class "f6 link dim br2 ba ph2 pv1 dib black"}
-            handlers) (first markup)])
+  [:button.f6.link.dim.br2.ba.ph2.pv1.dib.black
+   handlers (first markup)])
 
 (defmethod root :toggle-list
   [{:as ent :keys [markup content open?]}]
@@ -45,43 +46,52 @@
 (defmethod root :nav
   [{:as ent :keys [content routes]}]
   [:div
-   [:nav
-    {:class "db dt-l w-100 border-box pa3 ph5-l"}
+   [:nav.db.dt-l.w-100.border-box.pa3.ph5-l
     (into
-     [:div {:class "db dtc-l v-mid w-100 w-75-l tc tr-l"}]
+     [:div.db.dtc-l.v-mid.w-100.w-75-l.tc.tr-l ]
      (map
       (fn [[k v]]
-        [:a
+        [:a.link.dim.dark-gray.f6.f5-l.dib.mr3.mr4-l.fw5
          {:href     "#"
-          :class    "link dim dark-gray f6 f5-l dib mr3 mr4-l fw5"
-          :on-click #(rc/transact [[:set (assoc ent :content v)]])}
+          ;; with history enabled this breaks due to a bug in spec that
+          ;; does not respect a nonconforming during unform
+          :on-click #(rc/transact [[:set (assoc ent :content v)]] {:history? false})}
          (name k)]))
      routes)]
    content])
 
 (defmethod root :todo-item
   [{:as                             ent
-    :keys                           [id parent-id markup checked? active? actions]
+    :keys                           [id path parent-id markup checked? active? actions]
     {:keys [toggle-checked remove]} :actions}]
   [:div.flex.items-center.hide-child
    [:input {:type      :checkbox
             :checked   (boolean checked?)
             :on-change toggle-checked}]
 
-   (if-not active?
-     [:label {:style    {:padding "0 5px"}
-              :on-click #(rc/transact [[:set (assoc ent :active? true)]]
-                                   {:history? false})}
-      (str (first markup) " " id)]
-     [:input (merge
-              (shortcuts {"enter" #(-> % .-target .blur)})
-              {:default-value (first markup)
-               :auto-focus    true
-               :on-blur       #(let [v (-> % .-target .-value)]
-                                 (rc/transact
-                                  [[:set (assoc ent :active? false
-                                                    :markup [v])]]
-                                  {:history? (not= v (first markup))}))})])
+   [:div.outline-0.ph2
+    (merge
+     (shortcuts {"enter" #(let [v      (-> % .-target .-innerText)
+                                [tthis tnext] (ustr/split-at (ud/get-cursor) v)
+                                tnext? (boolean (not-empty tnext))]
+                            (rc/transact
+                             [[:set (assoc ent :active? false
+                                               :markup [tthis])]
+                              (when tnext?
+                                [:add-after path ((:add-id root) {:type :todo-item :active? true :markup [tnext]})])]
+                             {:history? (or tnext? (not= tthis (first markup)))}))})
+     {:content-editable                  true
+      :suppress-content-editable-warning true
+      :on-blur                           #(let [v (-> % .-target .-innerText)]
+                                            (rc/transact
+                                             [[:set (assoc ent :active? false
+                                                               :markup [v])]]
+                                             {:history? (not= v (first markup))}))
+      :on-click                          #(rc/transact [[:set (assoc ent :active? true)]]
+                                                       {:history? false})})
+    (cond-> (first markup)
+      false #_(not active?) (str " " id))] ; for debugging
+
    [:div.flex.dim.light-silver.pointer.f7.child
     [:div
      {:on-click remove}

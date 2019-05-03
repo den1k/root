@@ -12,7 +12,9 @@
 
 (s/def ::attrs map?)
 
-(s/def ::partial-entity (s/keys :opt-un [::id ::type ::content ::markup ::attrs]))
+(s/def ::partial-entity
+  (s/keys :opt-un [::id ::type ::content ::markup ::attrs]))
+
 (s/def ::entity
   (s/nonconforming
    (s/keys :req-un [::id] :opt-un [::type ::content ::markup ::attrs])))

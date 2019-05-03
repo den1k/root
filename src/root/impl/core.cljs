@@ -28,6 +28,8 @@
    {:add            [[:add
                       [:<- :content]
                       {:type :todo-item :active? true :markup ["New Todo"]}]]
+    :add-after      [[:add-after
+                      {:type :todo-item :active? true :markup ["New Todo"]}]]
     :remove         [[:remove [:<- :content]]]
     :toggle-checked [[:toggle :checked?]]}})
 
@@ -36,11 +38,21 @@
 
 (defn op-dispatch [[op _]] op)
 
+(declare transact vec-plop vec-pluck)
+
 (defmulti inverted-op op-dispatch)
 
 (defmethod inverted-op :add
   [[_ id-or-path ent]]
   [:remove id-or-path ent])
+
+(defmethod inverted-op :add-after
+  [[_ id-or-path ent]]
+  [:remove-after id-or-path ent])
+
+(defmethod inverted-op :remove-after
+  [[_ id-or-path ent]]
+  [:add-after id-or-path ent])
 
 (defmethod inverted-op :remove
   [[_ id-or-path ent]]
@@ -52,13 +64,14 @@
 
 (defmethod inverted-op :toggle [tx] tx)
 
-(defn log-txs [[[op] :as txs]]
-  (case op
-    (:undo :redo) nil
-    (let [{:keys [log]} @history-log]
-      (swap! history-log assoc
-             :log (conj log (mapv inverted-op txs))
-             :redo-log []))))
+(defn log-txs [ctxs]
+  (let [[[op] :as txs] (s/unform ::txs ctxs)]
+    (case op
+      (:undo :redo) nil
+      (let [{:keys [log]} @history-log]
+        (swap! history-log assoc
+               :log (conj log (mapv inverted-op txs))
+               :redo-log [])))))
 
 (declare transact)
 
@@ -96,7 +109,10 @@
                                 :else ref)))
                  (conj ref+ent))))))
 
-(defn pluck-vec [seq & idxs]
+(defn vec-plop [seq idx item]
+  (vec (concat (take idx seq) [item] (drop idx seq))))
+
+(defn vec-pluck [seq & idxs]
   (if-not idxs
     seq
     (let [idxs (set idxs)]
@@ -107,8 +123,16 @@
                      (when (not (contains? idxs idx)) i))))
             seq))))
 
-(defn plop-vec [seq idx item]
-  (vec (concat (take idx seq) [item] (drop idx seq))))
+(defmethod run-tx :add-after
+  [{:keys [path ent]}]
+  (let [[ref :as ref+ent] (ent->ref+ent ent)]
+    (swap! state
+           (fn [st]
+             (-> st
+                 (update-in (pop path)
+                            (fn [x]
+                              (vec-plop x (-> path peek inc) ref)))
+                 (conj ref+ent))))))
 
 (defmethod run-tx :remove
   [{:keys [path ent]}]                  ;; todo clean path
@@ -117,12 +141,21 @@
     (swap! state
            (fn [st]
              (-> st
-                 (update-in (if ent-path (butlast ent-path) path)
+                 (update-in (if ent-path (pop ent-path) path)
                             (fn [x]
                               (cond
                                 (s/valid? ::ent/refs x)
                                 (into [] (remove #(= % ref)) x)
                                 :else nil)))
+                 (dissoc ref))))))
+
+(defmethod run-tx :remove-after
+  [{:keys [path ent]}]                  ;; todo clean path
+  (let [ref      (ent->ref ent)]
+    (swap! state
+           (fn [st]
+             (-> st
+                 (update-in (pop path) vec-pluck (-> path peek inc))
                  (dissoc ref))))))
 
 (defmethod run-tx :set
@@ -138,7 +171,8 @@
           (fn [x]
             (if (keyword? x)
               [x]
-              (and (vector? x) (not-empty x)))))))
+              (and (vector? x) (not-empty x))))
+          vec)))
 
 (s/def ::tx
   (s/cat :op keyword?
@@ -161,12 +195,11 @@
    (transact txs {:history? true}))
   ;; could return ids for to trigger re-render based on id->views index
   ([txs {:keys [history?]}]
-   (when history?
-     (log-txs txs))
-   (doseq [tx txs]
-     (->> tx
-          (u/conform! ::tx)
-          run-tx))))
+   (let [conformed-txs (u/conform! ::txs (filter identity txs))]
+     (when history?
+       (log-txs conformed-txs))
+     (doseq [ctx conformed-txs]
+       (run-tx ctx)))))
 
 (defn __border [color]
   {:border (str "1px solid " (name color))})

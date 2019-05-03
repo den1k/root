@@ -68,6 +68,7 @@
             (let [{:keys [op path ent]} (u/conform! ::partial-tx tx)]
               (cond-> [op]
                 path (conj (replace {:<- parent-id} path))
+                (not path) (conj (:path orig-ent))
                 ent (conj (cond-> ent (nil? (:id ent)) add-id))
                 (not ent) (conj orig-ent))))
           (form-txs [txs]
