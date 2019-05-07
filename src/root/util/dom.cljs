@@ -4,6 +4,11 @@
   ISeqable
   (-seq [array] (array-seq array 0)))
 
+(defn active-element? [node]
+  (boolean
+   (some-> (.. js/document -activeElement)
+           (.isSameNode node))))
+
 (defn get-selection
   "Returns index of caret in text. If include-parent is true,
   will also count all siblings until the node containing the caret."
@@ -36,15 +41,21 @@
 (defn get-cursor []
   (:end (get-selection)))
 
-(defn set-cursor [node idx]
-  (if (zero? (count (.-textContent node)))
-    (doto node
-      (aset "innerHTML" " ")
-      (set-cursor 0)
-      (aset "innerHTML" ""))
-    (set-selection node idx idx)))
+(defn set-cursor
+  ([node idx] (set-cursor node idx {}))
+  ([node idx {:keys [unless-active?]}]
+   (if (and unless-active? (active-element? node))
+     nil
+     (if (zero? (count (.-textContent node)))
+       (doto node
+         (aset "innerHTML" " ")
+         (set-cursor 0)
+         (aset "innerHTML" ""))
+       (set-selection node idx idx)))))
 
-(defn set-cursor-to-end [node]
-  (let [node (or (.-lastElementChild node) node)
-        txt-count (count (.-textContent node))]
-    (set-cursor node txt-count)))
+(defn set-cursor-to-end
+  ([node] (set-cursor-to-end node {}))
+  ([node opts]
+   (let [node      (or (.-lastElementChild node) node)
+         txt-count (count (.-textContent node))]
+     (set-cursor node txt-count opts))))

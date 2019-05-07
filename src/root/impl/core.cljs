@@ -24,6 +24,8 @@
   {:global
    {:undo [[:undo]]
     :redo [[:redo]]}
+   :toggle-list
+   {:remove [[:remove [:<- :content]]]}
    :todo-item
    {:add            [[:add
                       [:<- :content]
@@ -151,7 +153,7 @@
 
 (defmethod run-tx :remove-after
   [{:keys [path ent]}]                  ;; todo clean path
-  (let [ref      (ent->ref ent)]
+  (let [ref (ent->ref ent)]
     (swap! state
            (fn [st]
              (-> st
@@ -160,7 +162,8 @@
 
 (defmethod run-tx :set
   [{:keys [path ent]}]
-  (let [ref+ent (ent->ref+ent (dissoc ent :actions :handlers))]
+  (let [ref+ent (ent->ref+ent (dissoc ent :actions :handlers ; :content
+                                      ))]
     (swap! state
            (fn [st]
              (-> st (conj ref+ent))))))
@@ -248,6 +251,7 @@
    (merge
     (multi/multi-dispatch
      {:dispatch-fn         ent->view-name
-      :default-dispatch-fn default-view})
+      :default-dispatch-fn default-view
+      :invoke-fn           (fn invoke [f x] ^{:key (:id x)} [f x])})
     opts)))
 

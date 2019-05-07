@@ -16,7 +16,8 @@
  )
 
 (defn multi-dispatch
-  [{:keys [dispatch-fn default-dispatch-fn]}]
+  [{:keys [dispatch-fn default-dispatch-fn invoke-fn]
+    :or   {invoke-fn (fn invoke [f x] (f x))}}]
   {:pre [(ifn? dispatch-fn)]}
   (let [default :default
         table   (atom
@@ -35,5 +36,5 @@
                             t            @table
                             f            (or (get t dispatch-val)
                                              (get t default))]
-                        (f x)))
+                        (invoke-fn f x)))
      :method-table  table}))
