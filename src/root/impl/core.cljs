@@ -162,8 +162,7 @@
 
 (defmethod run-tx :set
   [{:keys [path ent]}]
-  (let [ref+ent (ent->ref+ent (dissoc ent :actions :handlers ; :content
-                                      ))]
+  (let [ref+ent (ent->ref+ent ent)]
     (swap! state
            (fn [st]
              (-> st (conj ref+ent))))))
@@ -201,25 +200,26 @@
    (let [conformed-txs (u/conform! ::txs (filter identity txs))]
      (when history?
        (log-txs conformed-txs))
-     (doseq [ctx conformed-txs]
+     (doseq [ctx conformed-txs
+             :let [ctx (update ctx :ent dissoc :actions :handlers :views)]]
        (run-tx ctx)))))
 
 (defn __border [color]
   {:border (str "1px solid " (name color))})
 
-(defn default-child-view [content]
+(defn default-child-view [views]
   (let [padded-view [:div {:style {:padding-left 10}}]]
-    (case (meta content)
-      ::rr/entity (conj padded-view content)
-      ::rr/entities (into padded-view content)
+    (case (meta views)
+      ::rr/entity (conj padded-view views)
+      ::rr/entities (into padded-view views)
       ::rr/entity-map (into padded-view
                             (map
                              (fn [[k child-or-children]]
                                [:div (str (name k) ": ")
                                 [default-child-view child-or-children]]))
-                            content))))
+                            views))))
 
-(defn default-view [{:as ent :keys [id type view markup content]}]
+(defn default-view [{:as ent :keys [id type view markup views]}]
   [:div
    {:style (merge (__border :tomato)
                   {:padding    10
@@ -229,7 +229,7 @@
    (when view
      [:div "View: " (name view)])
    (when markup (into [:div "Markup: "] markup))
-   (when content [:div "Content: " [default-child-view content]])])
+   (when views [:div "Content: " [default-child-view views]])])
 
 (defrecord UIRoot [add-method remove-method dispatch-fn method-table]
   IFn

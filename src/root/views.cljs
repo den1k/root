@@ -31,8 +31,7 @@
                "remove"]
               (into [:select {:value     (name ((:ent->view-name root) ent))
                               :on-change #(let [opt-kw (-> % .-target .-value keyword)]
-                                            (rc/transact [[:set
-                                                           (assoc ((:lookup root) id) :type opt-kw)]]))}]
+                                            (rc/transact [[:set (assoc ent :type opt-kw)]]))}]
                     (map (fn [x] [:option {:value x} x]))
                     ["todo-item" "toggle-list"])]])))
 
@@ -66,7 +65,7 @@
    (first markup)])
 
 (defmethod root :toggle-list
-  [{:as ent :keys [markup content open?]}]
+  [{:as ent :keys [markup views open?]}]
   [block ent
    (cond-> [:div
             [:div.flex.items-center
@@ -81,13 +80,13 @@
                            (when open?
                              {:transform        "rotate(90deg)"
                               :transform-origin :center}))
-                :on-click #(rc/transact [[:toggle :open? (rc/lookup (:id ent))]])}
+                :on-click #(rc/transact [[:toggle :open? ent]])}
                "▶"]]
              [input {} ent]]]
-     open? (into content))])
+     open? (into views))])
 
 (defmethod root :nav
-  [{:as ent :keys [content routes]}]
+  [{:as ent :keys [views routes]}]
   [:div
    [:nav.db.dt-l.w-100.border-box.pa3.ph5-l
     (into
@@ -101,7 +100,7 @@
           :on-click #(rc/transact [[:set (assoc ent :content v)]] {:history? false})}
          (name k)]))
      routes)]
-   content])
+   views])
 
 (defmethod root :todo-item
   [{:as                             ent

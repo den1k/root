@@ -34,7 +34,7 @@
 (defn resolve-child-views
   ([ent] (resolve-child-views ent identity))
   ([{:as ent :keys [content]} f]
-   (cond-> ent content (update :content resolve-content f))))
+   (cond-> ent content (assoc :views (resolve-content content f)))))
 
 (s/def ::txs-path (s/coll-of keyword?))
 
