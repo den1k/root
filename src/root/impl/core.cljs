@@ -2,7 +2,6 @@
   (:require [medley.core :as md]
             [reagent.core :as r]
             [cljs.spec.alpha :as s]
-            [root.impl.mock-data :as mock]
             [root.impl.multi :as multi]
             [root.impl.resolver :as rr]
             [root.impl.entity :as ent]
@@ -17,24 +16,9 @@
 (defn ent->ref+ent [ent]
   [(ent->ref ent) ent])
 
-(def state (r/atom (u/project ent->ref+ent mock/data)))
+(def state (r/atom {}))
+
 (defn lookup [id] (get @state id))
-
-(def entity-actions
-  {:global
-   {:undo [[:undo]]
-    :redo [[:redo]]}
-   :toggle-list
-   {:remove [[:remove [:<- :content]]]}
-   :todo-item
-   {:add            [[:add
-                      [:<- :content]
-                      {:type :todo-item :active? true :markup ["New Todo"]}]]
-    :add-after      [[:add-after
-                      {:type :todo-item :active? true :markup ["New Todo"]}]]
-    :remove         [[:remove [:<- :content]]]
-    :toggle-checked [[:toggle :checked?]]}})
-
 
 (def history-log (atom {:idx nil :log []}))
 
@@ -219,7 +203,7 @@
                                 [default-child-view child-or-children]]))
                             views))))
 
-(defn default-view [{:as ent :keys [id type view markup views]}]
+(defn default-view* [{:as ent :keys [id type view markup views]}]
   [:div
    {:style (merge (__border :tomato)
                   {:padding    10
@@ -231,10 +215,21 @@
    (when markup (into [:div "Markup: "] markup))
    (when views [:div "Content: " [default-child-view views]])])
 
-(defrecord UIRoot [add-method remove-method dispatch-fn method-table]
+(defrecord UIRoot
+  [add-method remove-method dispatch-fn method-table]
   IFn
-  (-invoke [_ x]
-    (dispatch-fn x))
+  (-invoke
+    [this a]
+    (this a nil))
+  (-invoke
+    [this a b]
+    (this a b nil))
+  (-invoke
+    [{:keys [transact lookup]} a b c]
+    (case a
+      :transact (transact b c)
+      :lookup (lookup b)
+      (dispatch-fn a)))
   IMultiFn
   (-add-method [_ dispatch-val f]
     (add-method dispatch-val f))
@@ -244,14 +239,14 @@
 
 (defn ui-root
   [{:as   opts
-    :keys [ent->ref ent->view-name lookup transact entity-actions add-id]}]
-  {:pre [ent->view-name lookup ent->ref
-         transact entity-actions add-id]} ;; todo add transact as a required function
+    :keys [ent->ref ent->view-name default-view invoke-fn lookup transact entity-actions add-id]
+    :or   {default-view default-view*}}]
+  {:pre [ent->view-name lookup ent->ref transact entity-actions add-id]}
   (map->UIRoot
    (merge
     (multi/multi-dispatch
      {:dispatch-fn         ent->view-name
       :default-dispatch-fn default-view
-      :invoke-fn           (fn invoke [f x] ^{:key (:id x)} [f x])})
+      :invoke-fn           invoke-fn})
     opts)))
 

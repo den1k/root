@@ -11,13 +11,13 @@
 
                :modules
                            {:main
-                            {:entries [root.core]}}
+                            {:entries [examples]}}
 
                :devtools
                ;; before live-reloading any code call this function
-                           {:before-load root.core/stop
+                           {:before-load examples/stop
                             ;; after live-reloading finishes call this function
-                            :after-load  root.core/start
+                            :after-load  examples/start
                             ;; serve the public directory over http at port 8700
                             :http-root   "public"
                             :http-port   8700

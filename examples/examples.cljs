@@ -1,6 +1,6 @@
-(ns root.core
+(ns examples
   (:require [reagent.core :as reagent :refer [atom]]
-            [root.views :refer [test-root]]))
+            [rich-document.views :refer [test-root]]))
 
 ;; define your app data so that it doesn't get over-written on reload
 

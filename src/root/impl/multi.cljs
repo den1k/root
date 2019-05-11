@@ -16,17 +16,17 @@
  )
 
 (defn multi-dispatch
-  [{:keys [dispatch-fn default-dispatch-fn invoke-fn]
-    :or   {invoke-fn (fn invoke [f x] (f x))}}]
+  [{:keys [dispatch-fn default-dispatch-fn invoke-fn]}]
   {:pre [(ifn? dispatch-fn)]}
-  (let [default :default
-        table   (atom
-                 {default
-                  (or default-dispatch-fn
-                      (fn default-dispatch [x]
-                        (throw
-                         (ex-info
-                          "No default method defined" {:arg x}))))})]
+  (let [invoke-fn (or invoke-fn (fn invoke [f x] (f x)))
+        default   :default
+        table     (atom
+                   {default
+                    (or default-dispatch-fn
+                        (fn default-dispatch [x]
+                          (throw
+                           (ex-info
+                            "No default method defined" {:arg x}))))})]
     {:add-method    (fn add-method [dispatch-val f]
                       (swap! table assoc dispatch-val f))
      :remove-method (fn remove-method [dispatch-val]

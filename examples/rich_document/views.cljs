@@ -1,22 +1,9 @@
-(ns root.views
+(ns rich-document.views
   (:require [root.impl.resolver :as rr]
-            [root.impl.core :as rc]
+            [rich-document.core :refer [root]]
             [den1k.shortcuts :refer [shortcuts global-shortcuts]]
-            [root.util.dom :as ud]
-            [root.util.string :as ustr]))
-
-(def root (rc/ui-root
-           {:ent->ref       rc/ent->ref
-            :lookup         rc/lookup
-            :ent->view-name (fn [x] (or (:view x) (:type x)))
-            :transact       rc/transact
-            :entity-actions rc/entity-actions
-            :add-id         rc/add-id}))
-
-;; not great because this is an implementation detail instead
-;; a spec of the behavior – also not using transactions
-(global-shortcuts {"cmd+z"       #(rc/transact [[:undo]] {:history? false})
-                   "cmd+shift+z" #(rc/transact [[:redo]] {:history? false})})
+            [util.dom :as ud]
+            [util.string :as ustr]))
 
 (defn block
   [{:as              ent
@@ -31,7 +18,7 @@
                "remove"]
               (into [:select {:value     (name ((:ent->view-name root) ent))
                               :on-change #(let [opt-kw (-> % .-target .-value keyword)]
-                                            (rc/transact [[:set (assoc ent :type opt-kw)]]))}]
+                                            (root :transact [[:set (assoc ent :type opt-kw)]]))}]
                     (map (fn [x] [:option {:value x} x]))
                     ["todo-item" "toggle-list"])]])))
 
@@ -54,13 +41,13 @@
      true
      :on-blur
      #(let [v (-> % .-target .-innerText)]
-        (rc/transact
-         [[:set (assoc ent :active? false
-                           :markup [v])]]
-         {:history? (not= v (first markup))}))
+        (root :transact
+              [[:set (assoc ent :active? false
+                                :markup [v])]]
+              {:history? (not= v (first markup))}))
      :on-click
-     #(rc/transact [[:set (assoc ent :active? true)]]
-                   {:history? false})}
+     #(root :transact [[:set (assoc ent :active? true)]]
+            {:history? false})}
     opts)
    (first markup)])
 
@@ -80,7 +67,7 @@
                            (when open?
                              {:transform        "rotate(90deg)"
                               :transform-origin :center}))
-                :on-click #(rc/transact [[:toggle :open? ent]])}
+                :on-click #(root :transact [[:toggle :open? ent]])}
                "▶"]]
              [input {} ent]]]
      open? (into views))])
@@ -89,6 +76,7 @@
   [{:as ent :keys [views routes]}]
   [:div
    [:nav.db.dt-l.w-100.border-box.pa3.ph5-l
+    (subs (str (.getTime (js/Date.))) 9)
     (into
      [:div.db.dtc-l.v-mid.w-100.w-75-l.tc.tr-l]
      (map
@@ -97,7 +85,7 @@
          {
           ;; with history enabled this breaks due to a bug in spec that
           ;; does not respect a nonconforming during unform
-          :on-click #(rc/transact [[:set (assoc ent :content v)]] {:history? false})}
+          :on-click #(root :transact [[:set (assoc ent :content v)]] {:history? false})}
          (name k)]))
      routes)]
    views])
@@ -122,10 +110,10 @@
                   #(let [v      (-> % .-target .-innerText)
                          [tthis tnext] (ustr/split-at (ud/get-cursor) v)
                          tnext? (boolean (not-empty tnext))]
-                     (rc/transact
-                      [[:set (assoc ent :active? false :markup [tthis])]
-                       [:add-after path ((:add-id root) {:type :todo-item :active? true :markup [(or tnext "")]})]]
-                      {:history? (or tnext? (not= tthis (first markup)))})
+                     (root :transact
+                           [[:set (assoc ent :active? false :markup [tthis])]
+                            [:add-after path ((:add-id root) {:type :todo-item :active? true :markup [(or tnext "")]})]]
+                           {:history? (or tnext? (not= tthis (first markup)))})
                      false)})
     ent]])
 

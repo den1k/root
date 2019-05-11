@@ -1,4 +1,4 @@
-(ns root.util.string
+(ns util.string
   (:refer-clojure :exclude [split-at]))
 
 (defn split-at [n s]
