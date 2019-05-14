@@ -241,7 +241,7 @@
   [{:as   opts
     :keys [ent->ref ent->view-name default-view invoke-fn lookup transact entity-actions add-id]
     :or   {default-view default-view*}}]
-  {:pre [ent->view-name lookup ent->ref transact entity-actions add-id]}
+  {:pre [ent->view-name lookup ent->ref transact add-id]}
   (map->UIRoot
    (merge
     (multi/multi-dispatch

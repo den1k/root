@@ -3,7 +3,8 @@
             [rich-document.core :refer [root]]
             [den1k.shortcuts :refer [shortcuts global-shortcuts]]
             [util.dom :as ud]
-            [util.string :as ustr]))
+            [util.string :as ustr]
+            [reagent.core :as r]))
 
 (defn block
   [{:as              ent
@@ -117,6 +118,10 @@
                      false)})
     ent]])
 
-(defn test-root [id]
+(defn example-root [id]
   (doto (rr/resolved-view root {:root-id id})
     #_js/console.log))
+
+(defn render-example []
+  (r/render [example-root 1]
+            (. js/document (getElementById "app"))))
