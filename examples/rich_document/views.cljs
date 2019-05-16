@@ -119,7 +119,12 @@
     ent]])
 
 (defn example-root [id]
-  (doto (rr/resolved-view root {:root-id id})
+  (doto
+   #_(rr/resolved-view root {:root-id id})
+    (rr/resolver-chain {:root     root
+                        :root-id id})
+
+
     #_js/console.log))
 
 (defn render-example []

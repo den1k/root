@@ -2,7 +2,8 @@
   (:require [root.impl.util :as u]
             [root.impl.entity :as ent]
             [cljs.spec.alpha :as s]
-            [medley.core :as md]))
+            [medley.core :as md]
+            [den1k.dll :as dll]))
 
 (defn resolve-content
   ([content] (resolve-content content identity))
@@ -89,6 +90,45 @@
         ent-actions (assoc :actions (wrap ent-actions))
         actions (update :actions merge (wrap actions))
         handlers (assoc :handlers (wrap handlers))))))
+
+(extend-type dll/DoublyLinkedList
+  IFn
+  (-invoke
+   ; HACK overloading each invocation with `this` to enable recursive calls
+    ([this]
+     (reduce (fn [out f] (if out (f out) (f this))) this))
+    ([this arg]
+     (reduce (fn [out f] (f out this))
+             arg
+             this))))
+
+(def resolver-chain
+  ; expects
+  ;{:keys [root root-id parent-id path]}
+  (dll/doubly-linked-list
+   identity
+   (fn lookup [{:as ctx :keys [root root-id]}]
+     (assoc ctx :ent ((:lookup root) root-id)))
+   (fn [{:as ctx}]
+     (update ctx :ent merge (select-keys ctx [:parent-id :path])))
+   (fn wrap-actions [{:as ctx :keys [root]}]
+     (update ctx :ent wrap-actions-and-handlers root))
+   (fn resolve-children [{:as ctx :keys [root root-id]} this]
+     (update ctx :ent
+             (fn [ent]
+               (resolve-child-views
+                ent
+                (fn [{:keys [ent-path id]}]
+                  (this (merge {:root      root
+                                :root-id   id
+                                :parent-id root-id}
+                               (when root-id
+                                 {:path
+                                  (into [root-id :content]
+                                        (u/ensure-vec ent-path))}))))))))
+   (fn dispatch [{:as ctx :keys [root ent]}]
+     (root ent)))
+  )
 
 (defn resolved-view
   ([{:as root :keys [root-id]}] (resolved-view root {:root-id root-id}))

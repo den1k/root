@@ -2,8 +2,7 @@
   (:require [root.impl.core :as rc]
             [rich-document.mock-data :as mock-data]
             [den1k.shortcuts :refer [shortcuts global-shortcuts]]
-            [root.impl.util :as u]
-            [reagent.core :as r]))
+            [root.impl.util :as u]))
 
 (def entity-actions
   {:global

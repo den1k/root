@@ -36,7 +36,8 @@
      span))
 
 (defn example-root [id]
-  (doto (rr/resolved-view root {:root-id id})
+  (doto (rr/resolver-chain {:root     root
+                            :root-id id})
     #_js/console.log))
 
 (defn render-example []

@@ -16,7 +16,7 @@
 (defn ent->ref+ent [ent]
   [(ent->ref ent) ent])
 
-(def state (r/atom {}))
+(defonce state (r/atom {}))
 
 (defn lookup [id] (get @state id))
 
@@ -239,7 +239,7 @@
 
 (defn ui-root
   [{:as   opts
-    :keys [ent->ref ent->view-name default-view invoke-fn lookup transact entity-actions add-id]
+    :keys [ent->ref ent->view-name default-view invoke-fn lookup transact add-id]
     :or   {default-view default-view*}}]
   {:pre [ent->view-name lookup ent->ref transact add-id]}
   (map->UIRoot

@@ -1,7 +1,7 @@
 (ns examples
   (:require [reagent.core :as reagent :refer [atom]]
-            #_[rich-document.views :as rich-doc]
-            [mixed-media.core :as mixed-media]))
+            [rich-document.views :as rich-doc]
+   #_[mixed-media.core :as mixed-media]))
 
 ;; define your app data so that it doesn't get over-written on reload
 
@@ -13,7 +13,8 @@
    [:h3 "Edit this and watch it change!"]])
 
 (defn start []
-  (mixed-media/render-example))
+  ;(mixed-media/render-example)
+  (rich-doc/render-example))
 
 (defn ^:export init []
   ;; init is called ONCE when the page loads
