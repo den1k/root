@@ -1,6 +1,7 @@
 (ns root.impl.core
   (:require [medley.core :as md]
             [reagent.core :as r]
+            [xframe.core.alpha :as xf]
             [cljs.spec.alpha :as s]
             [root.impl.multi :as multi]
             [root.impl.resolver :as rr]
@@ -18,7 +19,16 @@
 
 (defonce state (r/atom {}))
 
-(defn lookup [id] (get @state id))
+(defn set-state [st]
+  (reset! xf/db st)
+  (xf/notify-listeners!))
+
+(xf/reg-sub :get
+            (fn [k]
+              (get (xf/<- [::xf/db]) k)))
+
+(defn lookup [id]
+  (xf/<sub [:get id]))
 
 (def history-log (atom {:idx nil :log []}))
 

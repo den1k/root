@@ -1,19 +1,12 @@
 (ns examples
-  (:require [reagent.core :as reagent :refer [atom]]
-            [rich-document.views :as rich-doc]
+  (:require [rich-document.views :as rich-doc]
+            #_[debug.core :as debug-example]
    #_[mixed-media.core :as mixed-media]))
 
-;; define your app data so that it doesn't get over-written on reload
-
-(defonce app-state (atom {:text "Hello world!"}))
-
-(defn hello-world []
-  [:div
-   [:h1 (:text @app-state)]
-   [:h3 "Edit this and watch it change!"]])
 
 (defn start []
   ;(mixed-media/render-example)
+  ;(debug-example/render-example)
   (rich-doc/render-example))
 
 (defn ^:export init []

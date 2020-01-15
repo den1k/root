@@ -2,7 +2,8 @@
   (:require [root.impl.core :as rc]
             [rich-document.mock-data :as mock-data]
             [den1k.shortcuts :refer [shortcuts global-shortcuts]]
-            [root.impl.util :as u]))
+            [root.impl.util :as u]
+            [reagent.core :as r]))
 
 (def entity-actions
   {:global
@@ -19,7 +20,9 @@
     :remove         [[:remove [:<- :content]]]
     :toggle-checked [[:toggle :checked?]]}})
 
-(reset! rc/state (u/project rc/ent->ref+ent mock-data/data))
+;(reset! rc/state (u/project rc/ent->ref+ent mock-data/data))
+(rc/set-state (u/project rc/ent->ref+ent mock-data/data))
+;(reset! rc/state )
 
 (def root (rc/ui-root
            {:ent->ref       rc/ent->ref

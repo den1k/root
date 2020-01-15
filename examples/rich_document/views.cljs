@@ -4,6 +4,7 @@
             [den1k.shortcuts :refer [shortcuts global-shortcuts]]
             [util.dom :as ud]
             [util.string :as ustr]
+            [uix.dom.alpha :as uix.dom]
             [reagent.core :as r]))
 
 (defn block
@@ -75,6 +76,7 @@
 
 (defmethod root :nav
   [{:as ent :keys [views routes]}]
+  (js/console.log :NAV :RENDERS)
   [:div
    [:nav.db.dt-l.w-100.border-box.pa3.ph5-l
     (subs (str (.getTime (js/Date.))) 9)
@@ -119,14 +121,14 @@
     ent]])
 
 (defn example-root [id]
+  (js/console.log :RUN)
   (doto
-   #_(rr/resolved-view root {:root-id id})
-    (rr/resolver-chain {:root     root
-                        :root-id id})
-
+   (rr/resolved-view root {:root-id id})
+    #_(rr/resolver-chain {:root    root
+                          :root-id id})
 
     #_js/console.log))
 
 (defn render-example []
-  (r/render [example-root 1]
-            (. js/document (getElementById "app"))))
+  (uix.dom/render [example-root 1]
+                  (. js/document (getElementById "app"))))
