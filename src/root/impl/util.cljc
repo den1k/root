@@ -1,11 +1,12 @@
 (ns root.impl.util
-  (:require [cljs.spec.alpha :as s]))
+  (:require [#?(:clj  clojure.spec.alpha
+                :cljs cljs.spec.alpha) :as s]))
 
 (defn conform! [spec x]
   (let [ret (s/conform spec x)]
     (if (= ret ::s/invalid)
       (do
-        (js/console.error (s/explain-str spec x))
+        #_(js/console.error (s/explain-str spec x))
         (throw
          (ex-info "Value doesn't match spec"
                   {:value        x

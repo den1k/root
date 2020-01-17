@@ -1,12 +1,12 @@
 (ns root.impl.core
   (:require [medley.core :as md]
-            [reagent.core :as r]
             [xframe.core.alpha :as xf]
-            [cljs.spec.alpha :as s]
             [root.impl.multi :as multi]
             [root.impl.resolver :as rr]
             [root.impl.entity :as ent]
-            [root.impl.util :as u]))
+            [root.impl.util :as u]
+            [#?(:clj  clojure.spec.alpha
+                :cljs cljs.spec.alpha) :as s]))
 
 (defonce id-gen (u/make-id-gen 1000))
 (defn add-id [ent] (assoc ent :id (id-gen)))
@@ -17,7 +17,8 @@
 (defn ent->ref+ent [ent]
   [(ent->ref ent) ent])
 
-(defonce state (r/atom {}))
+;(defonce state (r/atom {}))
+(defonce state (atom {}))
 
 (defn set-state [st]
   (reset! xf/db st)
@@ -227,25 +228,36 @@
 
 (defrecord UIRoot
   [add-method remove-method dispatch-fn method-table]
-  IFn
-  (-invoke
-    [this a]
-    (this a nil))
-  (-invoke
-    [this a b]
-    (this a b nil))
-  (-invoke
-    [{:keys [transact lookup]} a b c]
-    (case a
-      :transact (transact b c)
-      :lookup (lookup b)
-      (dispatch-fn a)))
-  IMultiFn
-  (-add-method [_ dispatch-val f]
-    (add-method dispatch-val f))
-  (-remove-method [_ dispatch-val]
-    (remove-method dispatch-val))
-  (-methods [_] @method-table))
+  #?@(:clj
+      [clojure.lang.IFn
+       (invoke
+        [this a]
+        (this a nil))
+       (invoke
+        [this a b]
+        (this a b nil))
+       (invoke
+        [{:keys [transact lookup]} a b c]
+        (case a
+          :transact (transact b c)
+          :lookup (lookup b)
+          :view (add-method b c)
+          (dispatch-fn a)))]
+      :cljs
+      [IFn
+       (-invoke
+        [this a]
+        (this a nil))
+       (-invoke
+        [this a b]
+        (this a b nil))
+       (-invoke
+        [{:keys [transact lookup]} a b c]
+        (case a
+          :transact (transact b c)
+          :lookup (lookup b)
+          :view (add-method b c)
+          (dispatch-fn a)))]))
 
 (defn ui-root
   [{:as   opts

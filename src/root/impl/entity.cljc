@@ -1,5 +1,6 @@
 (ns root.impl.entity
-  (:require [cljs.spec.alpha :as s]))
+  (:require [#?(:clj  clojure.spec.alpha
+                :cljs cljs.spec.alpha) :as s]))
 
 (s/def ::id integer?)
 (s/def ::type keyword?)
