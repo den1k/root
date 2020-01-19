@@ -204,15 +204,15 @@
 
 (defn default-child-view [views]
   (let [padded-view [:div {:style {:padding-left 10}}]]
-    (case (meta views)
-      ::rr/entity (conj padded-view views)
-      ::rr/entities (into padded-view views)
-      ::rr/entity-map (into padded-view
-                            (map
-                             (fn [[k child-or-children]]
-                               [:div (str (name k) ": ")
-                                [default-child-view child-or-children]]))
-                            views))))
+    (case (:rr/type (meta views))
+      :entity (conj padded-view views)
+      :entities (into padded-view views)
+      :entity-map (into padded-view
+                        (map
+                         (fn [[k child-or-children]]
+                           [:div (str (name k) ": ")
+                            [default-child-view child-or-children]]))
+                        views))))
 
 (defn default-view* [{:as ent :keys [id type view markup views]}]
   [:div
@@ -231,18 +231,18 @@
   #?@(:clj
       [clojure.lang.IFn
        (invoke
-        [this a]
-        (this a nil))
+         [this a]
+         (this a nil))
        (invoke
-        [this a b]
-        (this a b nil))
+         [this a b]
+         (this a b nil))
        (invoke
-        [{:keys [transact lookup]} a b c]
-        (case a
-          :transact (transact b c)
-          :lookup (lookup b)
-          :view (add-method b c)
-          (dispatch-fn a)))]
+         [{:keys [transact lookup]} a b c]
+         (case a
+           :transact (transact b c)
+           :lookup (lookup b)
+           :view (add-method b c)
+           (dispatch-fn a)))]
       :cljs
       [IFn
        (-invoke
@@ -263,7 +263,9 @@
   [{:as   opts
     :keys [ent->ref ent->view-name default-view invoke-fn lookup transact add-id]
     :or   {default-view default-view*}}]
-  {:pre [ent->view-name lookup ent->ref transact add-id]}
+  {:pre [ent->view-name lookup ent->ref]}
+  (when (or (nil? transact) (nil? add-id))
+    (println "Warning: static use only. transact and add-id functions missing."))
   (map->UIRoot
    (merge
     (multi/multi-dispatch

@@ -2,7 +2,6 @@
   (:require [root.impl.util :as u]
             [root.impl.entity :as ent]
             [medley.core :as md]
-            [den1k.dll :as dll]
             [#?(:clj  clojure.spec.alpha
                 :cljs cljs.spec.alpha) :as s]))
 
@@ -11,7 +10,7 @@
   ([content f]
    (let [[type refs*] (u/conform! ::ent/content content)]
      (case type
-       :ref (with-meta (f {:id refs*}) {:type ::entity})
+       :ref (with-meta (f {:id refs*}) {::type :entity})
        :refs (with-meta (let [x (vec
                                  (map-indexed
                                   (fn [k ref]
@@ -19,7 +18,7 @@
                                         :id       ref}))
                                   refs*))]
                           x)
-                        {:type ::entities})
+                        {::type :entities})
        :refs-map (with-meta
                   (reduce-kv
                    (fn [out k v]
@@ -34,7 +33,7 @@
                                                          k)))))))
                    {}
                    content)
-                  {:type ::entity-map})))))
+                  {::type :entity-map})))))
 
 (defn resolve-child-views
   ([ent] (resolve-child-views ent identity))
