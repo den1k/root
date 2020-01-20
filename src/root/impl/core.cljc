@@ -17,19 +17,10 @@
 (defn ent->ref+ent [ent]
   [(ent->ref ent) ent])
 
-;(defonce state (r/atom {}))
-(defonce state (atom {}))
-
-(defn set-state [st]
-  (reset! xf/db st)
-  (xf/notify-listeners!))
-
-(xf/reg-sub :get
-            (fn [k]
-              (get (xf/<- [::xf/db]) k)))
+(defonce state xf/db #_(atom {}))
 
 (defn lookup [id]
-  (xf/<sub [:get id]))
+  (get @state id))
 
 (def history-log (atom {:idx nil :log []}))
 
@@ -96,6 +87,7 @@
 (defmethod run-tx :add
   [{:keys [path ent]}]
   (let [[ref :as ref+ent] (ent->ref+ent ent)]
+    #?(:cljs (js/console.log :add path ent))
     (swap! state
            (fn [st]
              (-> st
@@ -192,6 +184,7 @@
    (transact txs {:history? true}))
   ;; could return ids for to trigger re-render based on id->views index
   ([txs {:keys [history?]}]
+   #?(:cljs (js/console.log :tx txs))
    (let [conformed-txs (u/conform! ::txs (filter identity txs))]
      (when history?
        (log-txs conformed-txs))
@@ -204,7 +197,7 @@
 
 (defn default-child-view [views]
   (let [padded-view [:div {:style {:padding-left 10}}]]
-    (case (:rr/type (meta views))
+    (case (::rr/type (meta views))
       :entity (conj padded-view views)
       :entities (into padded-view views)
       :entity-map (into padded-view
@@ -274,3 +267,36 @@
       :invoke-fn           invoke-fn})
     opts)))
 
+(comment
+
+ (def state
+   {-1    {:id -1, :type :main, :content [97190 24426]},
+    97190 {:vendor "Act+Acre",
+           :title  "Mini Anti-Dandruff Shampoo + Moisture Balancing Conditioner",
+           :link   "https://actandacre.com/products/travel-cleanse-conditioner",
+           :price  "26.00",
+           :sku    "AA0001T+AA0002T",
+           :img    "https://cdn.shopify.com/s/files/1/0054/3978/3001/products/cleanse_conditioner_bundle_traavel_2x_65ac3e64-94e7-4c1b-93ca-ac9247cb6a62.png?v=1576620796",
+           :id     97190,
+           :type   :feed-item},
+    24426 {:vendor "Act+Acre",
+           :title  "Organic Bamboo Pillowcase",
+           :link   "https://actandacre.com/products/organic-bamboo-pillowcase-add-on",
+           :price  "20.00",
+           :sku    "AA011B",
+           :img    "https://cdn.shopify.com/s/files/1/0054/3978/3001/products/Pillowcase-1_449778ef-97cd-4e35-a653-a0fbaac4c632.jpg?v=1572615025",
+           :id     24426,
+           :type   :feed-item}})
+
+ (defn lookup [id] (get state id))
+
+ (def root
+   (ui-root
+    {:root-id        -1
+     :ent->ref       :id
+     :lookup         lookup
+     :ent->view-name :type
+     ;; fixme remove in next version
+     ;:invoke-fn (fn [_ x] x)
+     :transact       (constantly ::transacted)
+     :add-id         (constantly nil)})))

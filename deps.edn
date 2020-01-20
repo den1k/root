@@ -6,7 +6,8 @@
   medley                    {:mvn/version "1.2.0"}}
  :aliases
  {:dev
-  {:extra-paths ["dev" "test" "examples"]}
+  {:extra-deps  {mount {:mvn/version "0.1.16"}}
+   :extra-paths ["dev" "test" "examples"]}
   :cljs
   {:extra-deps
    {reagent

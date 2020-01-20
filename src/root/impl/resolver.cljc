@@ -136,6 +136,7 @@
 (defn resolved-view
   ([{:as root :keys [root-id]}] (resolved-view root {:root-id root-id}))
   ([{:as root :keys [lookup]} {:keys [root-id parent-id path]}]
+   ;#?(:cljs (js/console.log :resolving :root-id root-id :parent-id parent-id :path path))
    (-> root-id
        lookup
        (cond-> parent-id (assoc :parent-id parent-id))
