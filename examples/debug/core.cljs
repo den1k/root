@@ -1,9 +1,12 @@
 (ns debug.core
   (:require [root.impl.core :as rc]
-            [den1k.shortcuts :refer [shortcuts global-shortcuts]]
             [root.impl.util :as u]
+            [root.impl.resolver :as rr]
             [reagent.core :as r]
-            [root.impl.resolver :as rr]))
+            [uix.dom.alpha :as uix.dom]
+            [xframe.core.alpha :as xf]
+            [xframe.core.adapton :as adapton]
+            [uix.core.alpha :as uix]))
 
 (def entity-actions {})
 
@@ -12,59 +15,87 @@
    {:id 11 :type :debug-test :markup ["debug test"]}
    {:id 12 :type :debug-test :markup ["debug test 2"]}])
 
-(reset! rc/state (u/project rc/ent->ref+ent mock-data))
+#_(reset! rc/state (u/project rc/ent->ref+ent mock-data))
 
-(def debug-state (r/atom {1  {:id 1, :type :container, :content [2]},
-                          2  {:id 2, :type :container, :content [11 12]}
-                          11 {:id 11, :type :debug-test, :markup ["debug test"]},
-                          12 {:id 12, :type :debug-test, :markup ["debug test 2"]}}))
+(defonce debug-state
+  (adapton/aref
+   {1  {:id 1, :type :container, :content [2]},
+    2  {:id 2, :type :container, :content [11 12]}
+    11 {:id 11, :type :debug-test, :markup ["debug test"]},
+    12 {:id 12, :type :debug-test, :markup ["debug test 2"]}}))
+
+(xf/reg-sub :get
+            (fn [k]
+              (get (xf/<- [::xf/db]) k)))
+
+(xf/reg-event-db :db/init
+                 (fn [_ _]
+                   {1  {:id 1, :type :container, :content [2]},
+                    2  {:id 2, :type :container, :content [11 12]}
+                    11 {:id 11, :type :debug-test, :markup ["debug test"]},
+                    12 {:id 12, :type :debug-test, :markup ["debug test 2"]}}))
+
+(xf/reg-event-db :assoc-in
+                 (fn [db [_ ks v]]
+                   (assoc-in db ks v)))
+
+(defn lookup [id]
+  ;(get @xf/db id)
+  (xf/<sub [:get id]))
+
 
 (def root (rc/ui-root
            {:ent->ref       rc/ent->ref
             :invoke-fn      (fn invoke [f x]
-                              ^{:key (rc/ent->ref x)} [f x])
-            :lookup         (fn [x] (get @debug-state x)) #_(do @(r/cursor debug-state [%]))
-            :ent->view-name (fn [x] (or (:view x) (:type x)))
+                              ^{:key (rc/ent->ref x)}
+                              [f x])
+            :lookup         lookup #_(fn [x] (get @debug-state x))
+            :ent->view-name :type
             :transact       rc/transact
             :entity-actions entity-actions
             :add-id         rc/add-id}))
 
 (defn example-root [id]
   (js/console.log :RUN)
-  (doto
-   (rr/resolved-view root {:root-id id})
-    #_(rr/resolver-chain {:root    root
-                          :root-id id})
+  ;(rr/resolved-view root {:root-id id})
+  [rr/resolved-view root {:root-id id}]
+  )
 
-    #_js/console.log))
-;(rr/resolved-view root {:root-id 1})
-
-(defn debug-text-view [id]
-  (js/console.log :rendering id)
-  (into
-   [:div
-    {:on-click #(swap! debug-state assoc-in [id :markup] [(str (rand-int 1000))])}]
-   @(r/cursor debug-state [id :markup])))
-
-(defn alternate-root []
-  (js/console.log "rendering alternate root")
-  [:div
-   [debug-text-view 11]
-   [debug-text-view 12]
-   ])
 
 (defn render-example []
-  (r/render [example-root 1]
-            (. js/document (getElementById "app"))))
+  (
+    uix.dom/render
+   ;r/render
 
-(defmethod root :container
-  [{:as ent :keys [id views]}]
-  (js/console.log :rendered ent)
-  (into [:div] views))
+   [rr/resolved-view root {:root-id 1}]
+   (. js/document (getElementById "app"))))
 
-(defmethod root :debug-test
-  [{:as ent :keys [id markup]}]
-  (js/console.log :rendered ent)
-  (into [:div
-         {:on-click #(swap! debug-state assoc-in [id :markup] (str (rand-int 1000)))}]
-        markup))
+(root :view :container
+      (fn [{:as ent :keys [id views]}]
+        (js/console.log :rendered ent)
+        (into [:div.ba.pa2.green
+               "Container id: " id] views)))
+
+(root :view :debug-test
+      (fn [{:as ent :keys [parent-id id markup]}]
+        (js/console.log :rendered ent)
+        [:div.ba.pa2.red
+         [:button
+          {:on-click #(do
+                        #_(xf/dispatch [:assoc-in [id :markup] [(str (rand-int 1000))]])
+                        (xf/dispatch [:assoc-in [13] {:id 13, :type :debug-test, :markup ["debug test 3"]}])
+                        #_(xf/dispatch [:assoc-in [parent-id :content]
+                                      [13]])
+                        #_(swap! debug-state assoc-in [id :markup] [(str (rand-int 1000))])
+                        #_(xf/notify-listeners!))}
+          "Click me"]
+         "Debug test id: " id
+         (into [:div "Markup "]
+               (map (fn [m] [:span.pr1 m]))
+               markup)]))
+
+(defonce _  (xf/dispatch [:db/init]))
+
+
+#_(xf/dispatch [:assoc-in [2 :content]
+              [11 12 13]])
