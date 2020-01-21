@@ -144,12 +144,13 @@
        (wrap-actions-and-handlers root)
        (resolve-child-views
         (fn [{:keys [ent-path id]}]
-          (resolved-view root
-                         (cond->
-                          {:root-id   id
-                           :parent-id root-id}
-                           root-id (assoc :path
-                                          (into [root-id :content]
-                                                (u/ensure-vec ent-path)))))))
+          [resolved-view
+           root
+           (cond->
+            {:root-id   id
+             :parent-id root-id}
+             root-id (assoc :path
+                            (into [root-id :content]
+                                  (u/ensure-vec ent-path))))]))
        root)))
 

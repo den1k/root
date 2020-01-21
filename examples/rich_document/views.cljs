@@ -26,11 +26,15 @@
     :remove         [[:remove [:<- :content]]]
     :toggle-checked [[:toggle :checked?]]}})
 
-;(reset! rc/state (u/project rc/ent->ref+ent mock-data/data))
+(reset! rc/state (u/project rc/ent->ref+ent mock-data/data))
 ;(rc/set-state (u/project rc/ent->ref+ent mock-data/data))
 
+(xf/reg-sub :get
+            (fn [k]
+              (get (xf/<- [::xf/db]) k)))
+;@xf/db
 (defn lookup [id]
-  (get @rc/state id))
+  (xf/<sub [:get id]))
 
 (def root (rc/ui-root
            {:ent->ref       rc/ent->ref
@@ -161,7 +165,8 @@
 
 (defn example-root [id]
   (js/console.log :RUN)
-  (doto
+  [rr/resolved-view root {:root-id id}]
+  #_(doto
    (rr/resolved-view root {:root-id id})
     #_(rr/resolver-chain {:root    root
                           :root-id id})
@@ -169,6 +174,6 @@
     #_js/console.log))
 (defn render-example []
   (uix.dom/render
-   [example-root 2]
+   [example-root 1]
    ;[:h1 "hello"]
    (. js/document (getElementById "app"))))

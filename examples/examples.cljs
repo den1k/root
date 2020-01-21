@@ -1,13 +1,14 @@
 (ns examples
-  (:require #_[rich-document.views :as rich-doc]
-            [debug.core :as debug-example]
+  (:require
+   [rich-document.views :as rich-doc]
+            ;[debug.core :as debug-example]
    #_[mixed-media.core :as mixed-media]))
 
 
 (defn start []
   ;(mixed-media/render-example)
-  (debug-example/render-example)
-  #_(rich-doc/render-example))
+  ;(debug-example/render-example)
+  (rich-doc/render-example))
 
 (defn ^:export init []
   ;; init is called ONCE when the page loads

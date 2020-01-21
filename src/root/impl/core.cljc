@@ -17,7 +17,7 @@
 (defn ent->ref+ent [ent]
   [(ent->ref ent) ent])
 
-(defonce state xf/db #_(atom {}))
+(defonce state xf/db)
 
 (defn lookup [id]
   (get @state id))
@@ -190,7 +190,8 @@
        (log-txs conformed-txs))
      (doseq [ctx conformed-txs
              :let [ctx (update ctx :ent dissoc :actions :handlers :views)]]
-       (run-tx ctx)))))
+       (run-tx ctx)))
+   (xf/notify-listeners!)))
 
 (defn __border [color]
   {:border (str "1px solid " (name color))})

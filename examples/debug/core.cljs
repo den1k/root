@@ -15,15 +15,6 @@
    {:id 11 :type :debug-test :markup ["debug test"]}
    {:id 12 :type :debug-test :markup ["debug test 2"]}])
 
-#_(reset! rc/state (u/project rc/ent->ref+ent mock-data))
-
-(defonce debug-state
-  (adapton/aref
-   {1  {:id 1, :type :container, :content [2]},
-    2  {:id 2, :type :container, :content [11 12]}
-    11 {:id 11, :type :debug-test, :markup ["debug test"]},
-    12 {:id 12, :type :debug-test, :markup ["debug test 2"]}}))
-
 (xf/reg-sub :get
             (fn [k]
               (get (xf/<- [::xf/db]) k)))
@@ -43,17 +34,17 @@
   ;(get @xf/db id)
   (xf/<sub [:get id]))
 
-
 (def root (rc/ui-root
            {:ent->ref       rc/ent->ref
             :invoke-fn      (fn invoke [f x]
                               ^{:key (rc/ent->ref x)}
                               [f x])
-            :lookup         lookup #_(fn [x] (get @debug-state x))
+            :lookup         lookup
             :ent->view-name :type
             :transact       rc/transact
             :entity-actions entity-actions
             :add-id         rc/add-id}))
+
 
 (defn example-root [id]
   (js/console.log :RUN)
@@ -67,8 +58,14 @@
     uix.dom/render
    ;r/render
 
+   ;[rr/resolved-view root {:root-id 1}]
    [rr/resolved-view root {:root-id 1}]
+   ;[root (get @xf/db 1)]
    (. js/document (getElementById "app"))))
+(comment
+
+ (js/console.log (rr/resolved-view root {:root-id 1}))
+ )
 
 (root :view :container
       (fn [{:as ent :keys [id views]}]
@@ -84,8 +81,8 @@
           {:on-click #(do
                         #_(xf/dispatch [:assoc-in [id :markup] [(str (rand-int 1000))]])
                         (xf/dispatch [:assoc-in [13] {:id 13, :type :debug-test, :markup ["debug test 3"]}])
-                        #_(xf/dispatch [:assoc-in [parent-id :content]
-                                      [13]])
+                        (xf/dispatch [:assoc-in [parent-id :content]
+                                      [11 12 13]])
                         #_(swap! debug-state assoc-in [id :markup] [(str (rand-int 1000))])
                         #_(xf/notify-listeners!))}
           "Click me"]
@@ -94,8 +91,8 @@
                (map (fn [m] [:span.pr1 m]))
                markup)]))
 
-(defonce _  (xf/dispatch [:db/init]))
+(defonce _ (xf/dispatch [:db/init]))
 
 
 #_(xf/dispatch [:assoc-in [2 :content]
-              [11 12 13]])
+                [11 12 13]])
