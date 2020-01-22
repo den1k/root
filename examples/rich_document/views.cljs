@@ -27,13 +27,15 @@
     :toggle-checked [[:toggle :checked?]]}})
 
 (reset! rc/state (u/project rc/ent->ref+ent mock-data/data))
-;(rc/set-state (u/project rc/ent->ref+ent mock-data/data))
 
 (xf/reg-sub :get
-            (fn [k]
-              (get (xf/<- [::xf/db]) k)))
-;@xf/db
+  (fn [k]
+    (get (xf/<- [::xf/db]) k)))
+
 (defn lookup [id]
+  (get (xf/<- [::xf/db]) id))
+
+(defn lookup-sub [id]
   (xf/<sub [:get id]))
 
 (def root (rc/ui-root
@@ -42,6 +44,7 @@
                               ^{:key (rc/ent->ref x)}
                               [f x])
             :lookup         lookup
+            :lookup-sub     lookup-sub
             :ent->view-name (fn [x] (or (:view x) (:type x)))
             :transact       rc/transact
             :entity-actions entity-actions
@@ -57,16 +60,19 @@
     {:keys [remove]} :actions}
    & children]
   (-> (into [:div.flex.items-center] children)
-      (conj [:div.hide-child
-             [:div.flex.dim.light-silver.pointer.f7.child
-              [:div
-               {:on-click remove}
-               "remove"]
-              (into [:select {:value     (name ((:ent->view-name root) ent))
-                              :on-change #(let [opt-kw (-> % .-target .-value keyword)]
-                                            (root :transact [[:set (assoc ent :type opt-kw)]]))}]
-                    (map (fn [x] [:option {:value x} x]))
-                    ["todo-item" "toggle-list"])]])))
+      (conj
+       [:div.hide-child
+        [:div.flex.dim.light-silver.pointer.f7.child
+         [:div
+          {:on-click remove}
+          "remove"]
+         (into
+          [:select
+           {:value     (name ((:ent->view-name root) ent))
+            :on-change #(let [opt-kw (-> % .-target .-value keyword)]
+                          (root :transact [[:set (assoc ent :type opt-kw)]]))}]
+          (map (fn [x] [:option {:value x} x]))
+          ["todo-item" "toggle-list"])]])))
 
 (root :view :button
       (fn [{:as ent :keys [markup handlers]}]
@@ -167,11 +173,11 @@
   (js/console.log :RUN)
   [rr/resolved-view root {:root-id id}]
   #_(doto
-   (rr/resolved-view root {:root-id id})
-    #_(rr/resolver-chain {:root    root
-                          :root-id id})
+     (rr/resolved-view root {:root-id id})
+      #_(rr/resolver-chain {:root    root
+                            :root-id id})
 
-    #_js/console.log))
+      #_js/console.log))
 (defn render-example []
   (uix.dom/render
    [example-root 1]

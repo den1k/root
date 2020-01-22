@@ -31,7 +31,7 @@
                       (swap! table assoc dispatch-val f))
      :remove-method (fn remove-method [dispatch-val]
                       (swap! table dissoc dispatch-val))
-     :dispatch-fn   (fn dispatch [x]
+     :dispatch      (fn dispatch [x]
                       (let [dispatch-val (dispatch-fn x)
                             t            @table
                             f            (or (get t dispatch-val)

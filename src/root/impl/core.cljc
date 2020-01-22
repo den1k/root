@@ -5,6 +5,7 @@
             [root.impl.resolver :as rr]
             [root.impl.entity :as ent]
             [root.impl.util :as u]
+            [clojure.set :as set]
             [#?(:clj  clojure.spec.alpha
                 :cljs cljs.spec.alpha) :as s]))
 
@@ -19,10 +20,7 @@
 
 (defonce state xf/db)
 
-(defn lookup [id]
-  (get @state id))
-
-(def history-log (atom {:idx nil :log []}))
+(defonce history-log (atom {:idx nil :log []}))
 
 (defn op-dispatch [[op _]] op)
 
@@ -48,18 +46,29 @@
 
 (defmethod inverted-op :set
   [[_ {:as ent :keys [id]}]]
-  [:set (lookup id)])
+  [:set ((-> ent meta :root) :lookup id)])
 
 (defmethod inverted-op :toggle [tx] tx)
+
+(defn inverted-txs [txs]
+  (let [methods (methods inverted-op)
+        ops     (into #{} (map op-dispatch) txs)
+        txs     (if (= ops (set/intersection methods ops))
+                  txs
+                  (let [diff (set/difference ops methods)]
+                    #?(:cljs (js/console.warn "Missing inverted-ops for:" diff))
+                    (remove (fn [tx] (contains? diff (op-dispatch tx))) txs)))]
+    (some->> txs (mapv inverted-op) not-empty)))
 
 (defn log-txs [ctxs]
   (let [[[op] :as txs] (s/unform ::txs ctxs)]
     (case op
       (:undo :redo) nil
       (let [{:keys [log]} @history-log]
-        (swap! history-log assoc
-               :log (conj log (mapv inverted-op txs))
-               :redo-log [])))))
+        (when-let [inv-txs (inverted-txs txs)]
+          (swap! history-log assoc
+                 :log (conj log inv-txs)
+                 :redo-log []))))))
 
 (declare transact)
 
@@ -87,7 +96,6 @@
 (defmethod run-tx :add
   [{:keys [path ent]}]
   (let [[ref :as ref+ent] (ent->ref+ent ent)]
-    #?(:cljs (js/console.log :add path ent))
     (swap! state
            (fn [st]
              (-> st
@@ -184,7 +192,7 @@
    (transact txs {:history? true}))
   ;; could return ids for to trigger re-render based on id->views index
   ([txs {:keys [history?]}]
-   #?(:cljs (js/console.log :tx txs))
+   #?(:cljs (js/console.log :txs txs))
    (let [conformed-txs (u/conform! ::txs (filter identity txs))]
      (when history?
        (log-txs conformed-txs))
@@ -221,7 +229,7 @@
    (when views [:div "Content: " [default-child-view views]])])
 
 (defrecord UIRoot
-  [add-method remove-method dispatch-fn method-table]
+  [add-view remove-method dispatch-view method-table]
   #?@(:clj
       [clojure.lang.IFn
        (invoke
@@ -235,8 +243,8 @@
          (case a
            :transact (transact b c)
            :lookup (lookup b)
-           :view (add-method b c)
-           (dispatch-fn a)))]
+           :view (add-view b c)
+           (dispatch-view a)))]
       :cljs
       [IFn
        (-invoke
@@ -246,58 +254,68 @@
         [this a b]
         (this a b nil))
        (-invoke
-        [{:keys [transact lookup]} a b c]
+        [{:as root :keys [transact lookup]} a b c]
         (case a
           :transact (transact b c)
-          :lookup (lookup b)
-          :view (add-method b c)
-          (dispatch-fn a)))]))
+          :lookup (with-meta (lookup b) {:root root})
+          :view (add-view b c)
+          (dispatch-view a)))]))
+
+(defn- view-multi-dispatch [opts]
+  (-> opts
+      multi/multi-dispatch
+      (update :add-method
+              (fn [add-method]
+                (fn with-name [dispatch-val view]
+                  #?(:cljs
+                     (set! (.-displayName view)
+                           (str "root-view__" (name dispatch-val))))
+                  (add-method dispatch-val view))))
+      (set/rename-keys {:add-method :add-view
+                        :dispatch   :dispatch-view})))
+
+;; Root config specs
+
+(s/def ::ent->view-name ifn?)
+(s/def ::lookup ifn?)
+(s/def ::lookup-sub ifn?)
+(s/def ::ent->ref ifn?)
+(s/def ::transact ifn?)
+(s/def ::add-id ifn?)
+
+(s/def ::ui-root-static
+  (s/keys :req-un [::ent->view-name ::lookup ::ent->ref]))
+
+(s/def ::ui-root-reactive
+  (s/and ::ui-root-static (s/keys :req-un [::lookup-sub])))
+
+(s/def ::ui-root-dynamic
+  (s/and ::ui-root-reactive (s/keys :req-un [::transact ::add-id])))
+
+(s/def ::ui-root
+  (s/or :dynamic ::ui-root-dynamic
+        :reactive ::ui-root-reactive
+        :static ::ui-root-static))
+
+(defn opts-warn [root-opts]
+  (let [[root-type _] (u/conform! ::ui-root root-opts)]
+    #?(:cljs
+       (when (contains? #{:static :reactive} root-type)
+         (js/console.warn
+          "Root Warning: static use only. Missing one or more required"
+          "functions: lookup-sub, transact, add-id.")))))
+
 
 (defn ui-root
   [{:as   opts
-    :keys [ent->ref ent->view-name default-view invoke-fn lookup transact add-id]
+    :keys [ent->view-name default-view invoke-fn lookup lookup-sub]
     :or   {default-view default-view*}}]
-  {:pre [ent->view-name lookup ent->ref]}
-  (when (or (nil? transact) (nil? add-id))
-    (println "Warning: static use only. transact and add-id functions missing."))
-  (map->UIRoot
-   (merge
-    (multi/multi-dispatch
-     {:dispatch-fn         ent->view-name
-      :default-dispatch-fn default-view
-      :invoke-fn           invoke-fn})
-    opts)))
-
-(comment
-
- (def state
-   {-1    {:id -1, :type :main, :content [97190 24426]},
-    97190 {:vendor "Act+Acre",
-           :title  "Mini Anti-Dandruff Shampoo + Moisture Balancing Conditioner",
-           :link   "https://actandacre.com/products/travel-cleanse-conditioner",
-           :price  "26.00",
-           :sku    "AA0001T+AA0002T",
-           :img    "https://cdn.shopify.com/s/files/1/0054/3978/3001/products/cleanse_conditioner_bundle_traavel_2x_65ac3e64-94e7-4c1b-93ca-ac9247cb6a62.png?v=1576620796",
-           :id     97190,
-           :type   :feed-item},
-    24426 {:vendor "Act+Acre",
-           :title  "Organic Bamboo Pillowcase",
-           :link   "https://actandacre.com/products/organic-bamboo-pillowcase-add-on",
-           :price  "20.00",
-           :sku    "AA011B",
-           :img    "https://cdn.shopify.com/s/files/1/0054/3978/3001/products/Pillowcase-1_449778ef-97cd-4e35-a653-a0fbaac4c632.jpg?v=1572615025",
-           :id     24426,
-           :type   :feed-item}})
-
- (defn lookup [id] (get state id))
-
- (def root
-   (ui-root
-    {:root-id        -1
-     :ent->ref       :id
-     :lookup         lookup
-     :ent->view-name :type
-     ;; fixme remove in next version
-     ;:invoke-fn (fn [_ x] x)
-     :transact       (constantly ::transacted)
-     :add-id         (constantly nil)})))
+  (opts-warn opts)
+  (let [opts (cond-> opts (nil? lookup-sub) (assoc :lookup-sub lookup))]
+    (map->UIRoot
+     (merge
+      (view-multi-dispatch
+       {:dispatch-fn         ent->view-name
+        :default-dispatch-fn default-view
+        :invoke-fn           invoke-fn})
+      opts))))

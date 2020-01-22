@@ -1,18 +1,26 @@
 (ns root.impl.util
-  (:require [#?(:clj  clojure.spec.alpha
+  (:require [expound.alpha :as exp]
+            [#?(:clj  clojure.spec.alpha
                 :cljs cljs.spec.alpha) :as s]))
 
-(defn conform! [spec x]
-  (let [ret (s/conform spec x)]
-    (if (= ret ::s/invalid)
-      (do
-        #_(js/console.error (s/explain-str spec x))
-        (throw
-         (ex-info "Value doesn't match spec"
-                  {:value        x
-                   :spec         spec
-                   :explain-data (s/explain-data spec x)})))
+(defn- spec-pred [fail-exp spec-fn spec x]
+  (let [ret (spec-fn spec x)]
+    (if (= fail-exp ret)
+      (let [expound-str (exp/expound-str spec x)]
+        (#?(:clj  println
+            :cljs js/console.error) expound-str)
+        (throw (ex-info "Value doesn't match spec"
+                        {:value   x
+                         :spec    spec
+                         :explain (s/explain-data spec x)})))
       ret)))
+
+(defn conform! [spec x]
+  (spec-pred ::s/invalid s/conform spec x))
+
+(defn valid! [spec x]
+  (when (spec-pred false s/valid? spec x)
+    x))
 
 (defn ensure-vec [x]
   (cond

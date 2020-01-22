@@ -3,7 +3,8 @@
  :deps
  {org.clojure/clojure       {:mvn/version "RELEASE"}
   org.clojure/clojurescript {:mvn/version "1.10.597"}
-  medley                    {:mvn/version "1.2.0"}}
+  medley                    {:mvn/version "1.2.0"}
+  expound                   {:mvn/version "0.8.4"}}
  :aliases
  {:dev
   {:extra-deps  {mount {:mvn/version "0.1.16"}}

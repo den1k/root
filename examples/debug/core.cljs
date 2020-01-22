@@ -56,7 +56,6 @@
 (defn render-example []
   (
     uix.dom/render
-   ;r/render
 
    ;[rr/resolved-view root {:root-id 1}]
    [rr/resolved-view root {:root-id 1}]

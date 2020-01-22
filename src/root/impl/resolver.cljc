@@ -11,13 +11,12 @@
    (let [[type refs*] (u/conform! ::ent/content content)]
      (case type
        :ref (with-meta (f {:id refs*}) {::type :entity})
-       :refs (with-meta (let [x (vec
-                                 (map-indexed
-                                  (fn [k ref]
-                                    (f {:ent-path k
-                                        :id       ref}))
-                                  refs*))]
-                          x)
+       :refs (with-meta (vec
+                         (map-indexed
+                          (fn [k ref]
+                            (f {:ent-path k
+                                :id       ref}))
+                          refs*))
                         {::type :entities})
        :refs-map (with-meta
                   (reduce-kv
@@ -94,51 +93,14 @@
         actions (update :actions merge (wrap actions))
         handlers (assoc :handlers (wrap handlers))))))
 
-#_(extend-type dll/DoublyLinkedList
-    IFn
-    (-invoke
-     ; HACK overloading each invocation with `this` to enable recursive calls
-      ([this]
-       (reduce (fn [out f] (if out (f out) (f this))) this))
-      ([this arg]
-       (reduce (fn [out f] (f out this))
-               arg
-               this))))
-
-#_(def resolver-chain
-    ; expects
-    ;{:keys [root root-id parent-id path]}
-    (dll/doubly-linked-list
-     identity
-     (fn lookup [{:as ctx :keys [root root-id]}]
-       (assoc ctx :ent ((:lookup root) root-id)))
-     (fn [{:as ctx}]
-       (update ctx :ent merge (select-keys ctx [:parent-id :path])))
-     (fn wrap-actions [{:as ctx :keys [root]}]
-       (update ctx :ent wrap-actions-and-handlers root))
-     (fn resolve-children [{:as ctx :keys [root root-id]} this]
-       (update ctx :ent
-               (fn [ent]
-                 (resolve-child-views
-                  ent
-                  (fn [{:keys [ent-path id]}]
-                    (this (merge {:root      root
-                                  :root-id   id
-                                  :parent-id root-id}
-                                 (when root-id
-                                   {:path
-                                    (into [root-id :content]
-                                          (u/ensure-vec ent-path))}))))))))
-     (fn dispatch [{:as ctx :keys [root ent]}]
-       (root ent)))
-    )
-
 (defn resolved-view
   ([{:as root :keys [root-id]}] (resolved-view root {:root-id root-id}))
-  ([{:as root :keys [lookup]} {:keys [root-id parent-id path]}]
+  ([{:as root :keys [lookup-sub]} {:keys [root-id parent-id path]}]
    ;#?(:cljs (js/console.log :resolving :root-id root-id :parent-id parent-id :path path))
    (-> root-id
-       lookup
+       lookup-sub
+       (with-meta {:root root})
+       ;((fn [x] #?(:cljs (js/console.log :resolve x)) x))
        (cond-> parent-id (assoc :parent-id parent-id))
        (cond-> path (assoc :path path))
        (wrap-actions-and-handlers root)
