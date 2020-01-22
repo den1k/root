@@ -12,13 +12,7 @@
 (defonce id-gen (u/make-id-gen 1000))
 (defn add-id [ent] (assoc ent :id (id-gen)))
 
-(defn ent->ref [ent]
-  (:id ent))
-
-(defn ent->ref+ent [ent]
-  [(ent->ref ent) ent])
-
-(defonce state xf/db)
+(def state xf/db)
 
 (defonce history-log (atom {:idx nil :log []}))
 
@@ -50,7 +44,7 @@
 
 (defmethod inverted-op :toggle [tx] tx)
 
-(defn inverted-txs [txs]
+(defn- inverted-txs [txs]
   (let [methods (methods inverted-op)
         ops     (into #{} (map op-dispatch) txs)
         txs     (if (= ops (set/intersection methods ops))
@@ -72,29 +66,29 @@
 
 (declare transact)
 
-(defn- shift-history [from-key to-key]
+(defn- shift-history [root from-key to-key]
   (let [{from from-key to to-key} @history-log]
     (when-let [txs (peek from)]
       (swap! history-log assoc
              from-key (pop from)
              to-key (conj to (mapv inverted-op txs)))
-      (transact txs {:history? false}))))
+      (transact root txs {:history? false}))))
 
-(defn undo []
-  (shift-history :log :redo-log))
+(defn undo [root]
+  (shift-history root :log :redo-log))
 
-(defn redo []
-  (shift-history :redo-log :log))
+(defn redo [root]
+  (shift-history root :redo-log :log))
 
 (comment
  (undo)
  (redo)
  )
 
-(defmulti run-tx :op)
+(defmulti run-tx (fn [_root tx] (:op tx)))
 
 (defmethod run-tx :add
-  [{:keys [path ent]}]
+  [{:as root :keys [ent->ref+ent]} {:as tx :keys [path ent]}]
   (let [[ref :as ref+ent] (ent->ref+ent ent)]
     (swap! state
            (fn [st]
@@ -121,7 +115,7 @@
             seq))))
 
 (defmethod run-tx :add-after
-  [{:keys [path ent]}]
+  [{:as root :keys [ent->ref+ent]} {:keys [path ent]}]
   (let [[ref :as ref+ent] (ent->ref+ent ent)]
     (swap! state
            (fn [st]
@@ -132,7 +126,7 @@
                  (conj ref+ent))))))
 
 (defmethod run-tx :remove
-  [{:keys [path ent]}]                  ;; todo clean path
+  [{:as root :keys [ent->ref]} {:keys [path ent]}]
   (let [ref      (ent->ref ent)
         ent-path (:path ent)]
     (swap! state
@@ -147,7 +141,7 @@
                  (dissoc ref))))))
 
 (defmethod run-tx :remove-after
-  [{:keys [path ent]}]                  ;; todo clean path
+  [{:as root :keys [ent->ref]} {:keys [path ent]}]
   (let [ref (ent->ref ent)]
     (swap! state
            (fn [st]
@@ -156,7 +150,7 @@
                  (dissoc ref))))))
 
 (defmethod run-tx :set
-  [{:keys [path ent]}]
+  [{:as root :keys [ent->ref+ent]} {:keys [path ent]}]
   (let [ref+ent (ent->ref+ent ent)]
     (swap! state
            (fn [st]
@@ -179,26 +173,25 @@
 (s/def ::txs (s/coll-of ::tx))
 
 (defmethod run-tx :toggle
-  [{:keys [path ent]}]
+  [{:as root :keys [ent->ref]} {:keys [path ent]}]
   (let [ref (ent->ref ent)]
     ;; path can be nil
     (swap! state update-in (concat [ref] path) not)))
 
-(defmethod run-tx :undo [_] (undo))
-(defmethod run-tx :redo [_] (redo))
+(defmethod run-tx :undo [root _] (undo root))
+(defmethod run-tx :redo [root _] (redo root))
 
 (defn transact
-  ([txs]
-   (transact txs {:history? true}))
-  ;; could return ids for to trigger re-render based on id->views index
-  ([txs {:keys [history?]}]
+  ([root txs]
+   (transact root txs {:history? true}))
+  ([root txs {:keys [history?]}]
    #?(:cljs (js/console.log :txs txs))
    (let [conformed-txs (u/conform! ::txs (filter identity txs))]
      (when history?
        (log-txs conformed-txs))
      (doseq [ctx conformed-txs
              :let [ctx (update ctx :ent dissoc :actions :handlers :views)]]
-       (run-tx ctx)))
+       (run-tx root ctx)))
    (xf/notify-listeners!)))
 
 (defn __border [color]
@@ -239,10 +232,10 @@
          [this a b]
          (this a b nil))
        (invoke
-         [{:keys [transact lookup]} a b c]
+         [{:as root :keys [transact lookup]} a b c]
          (case a
-           :transact (transact b c)
-           :lookup (lookup b)
+           :transact (transact root b c)
+           :lookup (with-meta (lookup b) {:root root})
            :view (add-view b c)
            (dispatch-view a)))]
       :cljs
@@ -256,7 +249,7 @@
        (-invoke
         [{:as root :keys [transact lookup]} a b c]
         (case a
-          :transact (transact b c)
+          :transact (transact root b c)
           :lookup (with-meta (lookup b) {:root root})
           :view (add-view b c)
           (dispatch-view a)))]))
@@ -271,8 +264,10 @@
                      (set! (.-displayName view)
                            (str "root-view__" (name dispatch-val))))
                   (add-method dispatch-val view))))
-      (set/rename-keys {:add-method :add-view
-                        :dispatch   :dispatch-view})))
+      (set/rename-keys {:add-method    :add-view
+                        :remove-method :remove-view
+                        :method-table  :view-table
+                        :dispatch      :dispatch-view})))
 
 ;; Root config specs
 
@@ -284,13 +279,13 @@
 (s/def ::add-id ifn?)
 
 (s/def ::ui-root-static
-  (s/keys :req-un [::ent->view-name ::lookup ::ent->ref]))
+  (s/keys :req-un [::ent->view-name ::lookup]))
 
 (s/def ::ui-root-reactive
   (s/and ::ui-root-static (s/keys :req-un [::lookup-sub])))
 
 (s/def ::ui-root-dynamic
-  (s/and ::ui-root-reactive (s/keys :req-un [::transact ::add-id])))
+  (s/and ::ui-root-reactive (s/keys :req-un [::transact ::add-id ::ent->ref])))
 
 (s/def ::ui-root
   (s/or :dynamic ::ui-root-dynamic
@@ -303,19 +298,20 @@
        (when (contains? #{:static :reactive} root-type)
          (js/console.warn
           "Root Warning: static use only. Missing one or more required"
-          "functions: lookup-sub, transact, add-id.")))))
-
+          "functions: lookup-sub, transact, ent->ref, add-id.")))))
 
 (defn ui-root
   [{:as   opts
-    :keys [ent->view-name default-view invoke-fn lookup lookup-sub]
+    :keys [ent->view-name default-view invoke-fn lookup lookup-sub ent->ref]
     :or   {default-view default-view*}}]
   (opts-warn opts)
-  (let [opts (cond-> opts (nil? lookup-sub) (assoc :lookup-sub lookup))]
-    (map->UIRoot
-     (merge
-      (view-multi-dispatch
-       {:dispatch-fn         ent->view-name
-        :default-dispatch-fn default-view
-        :invoke-fn           invoke-fn})
-      opts))))
+  (map->UIRoot
+   (merge
+    (view-multi-dispatch
+     {:dispatch-fn         ent->view-name
+      :default-dispatch-fn default-view
+      :invoke-fn           invoke-fn})
+    {:ent->ref+ent (fn ent->ref+ent [ent] [(ent->ref ent) ent])}
+    (when (nil? lookup-sub)
+      {:lookup-sub lookup})
+    opts)))

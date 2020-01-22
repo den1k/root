@@ -26,7 +26,12 @@
     :remove         [[:remove [:<- :content]]]
     :toggle-checked [[:toggle :checked?]]}})
 
-(reset! rc/state (u/project rc/ent->ref+ent mock-data/data))
+(defn ent->ref [ent]
+  (:id ent))
+
+(reset! rc/state (u/project (fn [ent]
+                              [(ent->ref ent) ent])
+                            mock-data/data))
 
 (xf/reg-sub :get
   (fn [k]
@@ -39,9 +44,9 @@
   (xf/<sub [:get id]))
 
 (def root (rc/ui-root
-           {:ent->ref       rc/ent->ref
+           {:ent->ref       ent->ref
             :invoke-fn      (fn invoke [f x]
-                              ^{:key (rc/ent->ref x)}
+                              ^{:key (ent->ref x)}
                               [f x])
             :lookup         lookup
             :lookup-sub     lookup-sub

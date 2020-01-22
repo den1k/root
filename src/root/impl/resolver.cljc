@@ -8,6 +8,8 @@
 (defn resolve-content
   ([content] (resolve-content content identity))
   ([content f]
+   ;; todo root.impl.entity does default to the :id key
+   ;; enable setting a key on root or to provide a spec for ::id
    (let [[type refs*] (u/conform! ::ent/content content)]
      (case type
        :ref (with-meta (f {:id refs*}) {::type :entity})
@@ -62,7 +64,7 @@
 
 (defn wrap-actions-and-handlers
   [{:as orig-ent :keys [type actions handlers parent-id]}
-   {:as root :keys [transact entity-actions add-id]}]
+   {:as root :keys [transact entity-actions add-id ent->ref]}]
   (letfn [(resolve-txs [conformed txs-or-txs-path]
             (case (first conformed)
               :partial-txs txs-or-txs-path
@@ -72,7 +74,7 @@
               (cond-> [op]
                 path (conj (replace {:<- parent-id} path))
                 (not path) (conj (:path orig-ent))
-                ent (conj (cond-> ent (nil? (:id ent)) add-id))
+                ent (conj (cond-> ent (nil? (ent->ref ent)) add-id))
                 (not ent) (conj orig-ent))))
           (form-txs [txs]
             (mapv form-tx txs))
@@ -85,7 +87,7 @@
                    (->> txs-or-path
                         (resolve-txs txs-or-path-conformed)
                         form-txs
-                        transact))))
+                        (transact root)))))
              actions-map))]
     (let [ent-actions (get entity-actions type)]
       (cond-> orig-ent
