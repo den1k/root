@@ -13,12 +13,12 @@
    (let [[type refs*] (u/conform! ::ent/content content)]
      (case type
        :ref (with-meta (f {:id refs*}) {::type :entity})
-       :refs (with-meta (vec
-                         (map-indexed
-                          (fn [k ref]
-                            (f {:ent-path k
-                                :id       ref}))
-                          refs*))
+       :refs (with-meta (into [:<>]
+                              (map-indexed
+                               (fn [k ref]
+                                 (f {:ent-path k
+                                     :id       ref})))
+                              refs*)
                         {::type :entities})
        :refs-map (with-meta
                   (reduce-kv

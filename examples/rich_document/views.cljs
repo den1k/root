@@ -8,8 +8,7 @@
             [root.impl.util :as u]
             [xframe.core.alpha :as xf]
             [rich-document.mock-data :as mock-data]
-            [uix.core.alpha :as uix]
-            [react-dom :as rdom]))
+            [uix.core.alpha :as uix]))
 
 (def entity-actions
   {:global
@@ -127,7 +126,7 @@
                       :on-click #(root :transact [[:toggle :open? ent]])}
                      "▶"]]
                    [input {} ent]]]
-           open? (into views))]))
+           open? (conj views))]))
 
 (root :view :nav
       (fn [{:as ent :keys [views routes]}]

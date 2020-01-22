@@ -201,7 +201,7 @@
   (let [padded-view [:div {:style {:padding-left 10}}]]
     (case (::rr/type (meta views))
       :entity (conj padded-view views)
-      :entities (into padded-view views)
+      :entities (conj padded-view views)
       :entity-map (into padded-view
                         (map
                          (fn [[k child-or-children]]
