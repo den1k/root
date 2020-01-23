@@ -255,7 +255,8 @@
           (dispatch-view a)))]))
 
 (defn- view-multi-dispatch [opts]
-  (-> opts
+  (-> {:invoke-fn (fn as-component [f x] [f x])}
+      (merge opts)
       multi/multi-dispatch
       (update :add-method
               (fn [add-method]
@@ -300,10 +301,14 @@
           "Root Warning: static use only. Missing one or more required"
           "functions: lookup-sub, transact, ent->ref, add-id.")))))
 
+(defn __temp-default-ent->ref [ent]
+  (:id ent))
+
 (defn ui-root
   [{:as   opts
     :keys [ent->view-name default-view invoke-fn lookup lookup-sub ent->ref]
-    :or   {default-view default-view*}}]
+    :or   {default-view default-view*
+           ent->ref     __temp-default-ent->ref}}]
   (opts-warn opts)
   (map->UIRoot
    (merge
@@ -311,7 +316,10 @@
      {:dispatch-fn         ent->view-name
       :default-dispatch-fn default-view
       :invoke-fn           invoke-fn})
-    {:ent->ref+ent (fn ent->ref+ent [ent] [(ent->ref ent) ent])}
+    ;; fixme because resolver relies on ent->ref being :id
+    ;; this adds them as defaults add ent->ref
+    {:ent->ref     ent->ref
+     :ent->ref+ent (fn ent->ref+ent [ent] [(ent->ref ent) ent])}
     (when (nil? lookup-sub)
       {:lookup-sub lookup})
     opts)))
