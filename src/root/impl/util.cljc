@@ -36,3 +36,6 @@
 (defn make-id-gen [start]
   (let [current (atom start)]
     (fn [] (swap! current inc))))
+
+(defn seek [pred coll]
+  (some #(when (pred %) %) coll))

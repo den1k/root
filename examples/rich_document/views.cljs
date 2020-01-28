@@ -51,6 +51,7 @@
             :lookup-sub     lookup-sub
             :ent->view-name (fn [x] (or (:view x) (:type x)))
             :transact       rc/transact
+            :child-keys     [:content]
             :entity-actions entity-actions
             :add-id         rc/add-id}))
 
@@ -79,9 +80,9 @@
           ["todo-item" "toggle-list"])]])))
 
 (root :view :button
-      (fn [{:as ent :keys [markup handlers]}]
-        [:button.f6.link.dim.br2.ba.ph2.pv1.dib.black
-         handlers (first markup)]))
+  (fn [{:as ent :keys [markup handlers]}]
+    [:button.f6.link.dim.br2.ba.ph2.pv1.dib.black
+     handlers (first markup)]))
 
 (defn input
   [opts {:as ent :keys [markup active?]}]
@@ -98,80 +99,80 @@
      :on-blur
      #(let [v (-> % .-target .-innerText)]
         (root :transact
-              [[:set (assoc ent :active? false
-                                :markup [v])]]
-              {:history? (not= v (first markup))}))
+          [[:set (assoc ent :active? false
+                            :markup [v])]]
+          {:history? (not= v (first markup))}))
      :on-click
      #(root :transact [[:set (assoc ent :active? true)]]
-            {:history? false})}
+        {:history? false})}
     opts)
    (first markup)])
 
 (root :view :toggle-list
-      (fn [{:as ent :keys [id markup views open?]}]
-        [block ent
-         (cond-> [:div
-                  [:div.flex.items-center
-                   [:div
-                    {:style {:padding 5}}
-                    [:div
-                     {:style    (merge
-                                 {:font-size   12
-                                  :line-height 1
-                                  :user-select :none
-                                  :cursor      :pointer}
-                                 (when open?
-                                   {:transform        "rotate(90deg)"
-                                    :transform-origin :center}))
-                      :on-click #(root :transact [[:toggle :open? ent]])}
-                     "▶"]]
-                   [input {} ent]]]
-           open? (conj views))]))
+  (fn [{:as ent :keys [id markup content-views open?]}]
+    [block ent
+     (cond-> [:div
+              [:div.flex.items-center
+               [:div
+                {:style {:padding 5}}
+                [:div
+                 {:style    (merge
+                             {:font-size   12
+                              :line-height 1
+                              :user-select :none
+                              :cursor      :pointer}
+                             (when open?
+                               {:transform        "rotate(90deg)"
+                                :transform-origin :center}))
+                  :on-click #(root :transact [[:toggle :open? ent]])}
+                 "▶"]]
+               [input {} ent]]]
+       open? (conj content-views))]))
 
 (root :view :nav
-      (fn [{:as ent :keys [views routes]}]
-        [:div
-         [:nav.db.dt-l.w-100.border-box.pa3.ph5-l
-          (subs (str (.getTime (js/Date.))) 9)
-          (into
-           [:div.db.dtc-l.v-mid.w-100.w-75-l.tc.tr-l]
-           (map
-            (fn [[k v]]
-              [:a.link.dim.dark-gray.f6.f5-l.dib.mr3.mr4-l.fw5.pointer
-               {;; with history enabled this breaks due to a bug in spec that
-                ;; does not respect a nonconforming during unform
-                :on-click #(root :transact [[:set (assoc ent :content v)]] {:history? false})}
-               (name k)]))
-           routes)]
-         views]))
+  (fn [{:as ent :keys [content-views routes]}]
+    [:div
+     [:nav.db.dt-l.w-100.border-box.pa3.ph5-l
+      (subs (str (.getTime (js/Date.))) 9)
+      (into
+       [:div.db.dtc-l.v-mid.w-100.w-75-l.tc.tr-l]
+       (map
+        (fn [[k v]]
+          [:a.link.dim.dark-gray.f6.f5-l.dib.mr3.mr4-l.fw5.pointer
+           {;; with history enabled this breaks due to a bug in spec that
+            ;; does not respect a nonconforming during unform
+            :on-click #(root :transact [[:set (assoc ent :content v)]] {:history? false})}
+           (name k)]))
+       routes)]
+     content-views]))
 
 (root :view :todo-item
-      (fn
-        [{:as                             ent
-          :keys                           [path markup checked?]
-          {:keys [toggle-checked remove]} :actions}]
-        [block ent
-         [:input {:type      :checkbox
-                  :checked   (boolean checked?)
-                  :on-change toggle-checked}]
-         [input
-          (shortcuts
-           {"backspace" (fn [e]
-                          (let [v (-> e .-target .-innerText)]
-                            (if (empty? v)
-                              (remove)
-                              ; todo if index at first position concat with previous ent
-                              )))
-            "enter"
-                        #(let [v      (-> % .-target .-innerText)
-                               [tthis tnext] (ustr/split-at (ud/get-cursor) v)
-                               tnext? (boolean (not-empty tnext))]
-                           (root :transact
-                                 [[:set (assoc ent :active? false :markup [tthis])]
-                                  [:add-after path ((:add-id root) {:type :todo-item :active? true :markup [(or tnext "")]})]]
-                                 {:history? (or tnext? (not= tthis (first markup)))})
-                           false)})
-          ent]]))
+  (fn
+    [{:as                             ent
+      :keys                           [path markup checked?]
+      {:keys [toggle-checked remove]} :actions}]
+    [block ent
+     [:input {:type      :checkbox
+              :checked   (boolean checked?)
+              :on-change toggle-checked}]
+     [input
+      (shortcuts
+       {"backspace" (fn [e]
+                      (let [v (-> e .-target .-innerText)]
+                        (if (empty? v)
+                          (remove)
+                          ; todo if index at first position concat with previous ent
+                          )))
+        "enter"
+                    #(let [v      (-> % .-target .-innerText)
+                           [tthis tnext] (ustr/split-at (ud/get-cursor) v)
+                           tnext? (boolean (not-empty tnext))]
+                       (root :transact
+                         [[:set (assoc ent :active? false :markup [tthis])]
+                          [:add-after path ((:add-id root) {:type :todo-item :active? true :markup [(or tnext "")]})]]
+                         {:history? (or tnext? (not= tthis (first markup)))})
+                       false)})
+      ent]]))
 
 (defn example-root [id]
   (js/console.log :RUN)

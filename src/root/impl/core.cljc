@@ -135,7 +135,7 @@
                  (update-in (if ent-path (pop ent-path) path)
                             (fn [x]
                               (cond
-                                (s/valid? ::ent/refs x)
+                                (s/valid? ::ent/refs-coll x)
                                 (into [] (remove #(= % ref)) x)
                                 :else nil)))
                  (dissoc ref))))))
@@ -194,11 +194,10 @@
        (run-tx root ctx)))
    (xf/notify-listeners!)))
 
-(defn __border [color]
-  {:border (str "1px solid " (name color))})
-
 (defn default-child-view [views]
-  (let [padded-view [:div {:style {:padding-left 10}}]]
+  (let [padded-view [:div {:style {:padding      5
+                                   :padding-left 10
+                                   :margin-top   5}}]]
     (case (::rr/type (meta views))
       :entity (conj padded-view views)
       :entities (conj padded-view views)
@@ -209,17 +208,38 @@
                             [default-child-view child-or-children]]))
                         views))))
 
-(defn default-view* [{:as ent :keys [id type view markup views]}]
-  [:div
-   {:style (merge (__border :tomato)
-                  {:padding    10
-                   :margin-top 5})}
-   [:div "id: " id]
-   [:div "Type: " (if type (name type) "[No type]")]
-   (when view
-     [:div "View: " (name view)])
-   (when markup (into [:div "Markup: "] markup))
-   (when views [:div "Content: " [default-child-view views]])])
+(defn- domifiable? [x]
+  ;; fixme spec it!
+  (and (not (fn? x))
+       (not (and (vector? x) (or (= :<> (first x))
+                                 (fn? (first x)))))))
+
+(defn- domify-map
+  ([vfn m] (domify-map [:<>] vfn m))
+  ([into-vec vfn m]
+   (into into-vec
+         (map (fn [[k v]]
+                [:div
+                 (str (name k) ": ") (vfn v)]))
+         m)))
+
+(defn child-views [ent]
+  (let [root (-> ent meta :root)]
+    (when-let [child-views (not-empty (select-keys ent (:child-view-keys root)))]
+      [domify-map default-child-view child-views])))
+
+(defn default-view* [ent]
+  ;; fixme pass root proper
+  (let [root      (-> ent meta :root)
+        non-views (apply dissoc ent
+                         :actions :path :parent-id :handlers
+                         (concat (:child-keys root) (:child-view-keys root)))]
+
+    [:div.mb2
+     {:style {:padding 10
+              :border  "1px solid tomato"}}
+     [domify-map (fn [v] [:span.code.f6 (pr-str v)]) non-views]
+     [child-views ent]]))
 
 (defrecord UIRoot
   [add-view remove-method dispatch-view method-table]
@@ -304,22 +324,35 @@
 (defn __temp-default-ent->ref [ent]
   (:id ent))
 
+(defn- child-view-mappings [{:keys [child-keys]}]
+  (let [child-view-keys       (mapv #(keyword (str (name %) "-views")) child-keys)
+        child-view-keys->view (zipmap child-keys child-view-keys)]
+    {:child-keys          child-keys
+     :child-view-keys     child-view-keys
+     :child-key->view-key child-view-keys->view}))
+
 (defn ui-root
   [{:as   opts
-    :keys [ent->view-name default-view invoke-fn lookup lookup-sub ent->ref]
+    :keys [ent->view-name default-view invoke-fn lookup lookup-sub ent->ref
+           child-keys
+           resolve-spec]
     :or   {default-view default-view*
-           ent->ref     __temp-default-ent->ref}}]
+           ent->ref     __temp-default-ent->ref
+           resolve-spec ::ent/refs}}]
+  ;; todo child-keys warn
   (opts-warn opts)
-  (map->UIRoot
-   (merge
-    (view-multi-dispatch
-     {:dispatch-fn         ent->view-name
-      :default-dispatch-fn default-view
-      :invoke-fn           invoke-fn})
-    ;; fixme because resolver relies on ent->ref being :id
-    ;; this adds them as defaults add ent->ref
-    {:ent->ref     ent->ref
-     :ent->ref+ent (fn ent->ref+ent [ent] [(ent->ref ent) ent])}
-    (when (nil? lookup-sub)
-      {:lookup-sub lookup})
-    opts)))
+  (let [opts (merge opts {:resolve-spec resolve-spec})]
+    (map->UIRoot
+     (merge
+      (view-multi-dispatch
+       {:dispatch-fn         ent->view-name
+        :default-dispatch-fn default-view
+        :invoke-fn           invoke-fn})
+      ;; fixme because resolver relies on ent->ref being :id
+      ;; this adds them as defaults add ent->ref
+      {:ent->ref     ent->ref
+       :ent->ref+ent (fn ent->ref+ent [ent] [(ent->ref ent) ent])}
+      (child-view-mappings opts)
+      (when (nil? lookup-sub)
+        {:lookup-sub lookup})
+      opts))))
