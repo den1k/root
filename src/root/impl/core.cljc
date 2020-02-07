@@ -185,7 +185,6 @@
   ([root txs]
    (transact root txs {:history? true}))
   ([root txs {:keys [history?]}]
-   #?(:cljs (js/console.log :txs txs))
    (let [conformed-txs (u/conform! ::txs (filter identity txs))]
      (when history?
        (log-txs conformed-txs))
@@ -207,12 +206,6 @@
                            [:div (str (name k) ": ")
                             [default-child-view child-or-children]]))
                         views))))
-
-(defn- domifiable? [x]
-  ;; fixme spec it!
-  (and (not (fn? x))
-       (not (and (vector? x) (or (= :<> (first x))
-                                 (fn? (first x)))))))
 
 (defn- domify-map
   ([vfn m] (domify-map [:<>] vfn m))
@@ -238,7 +231,18 @@
     [:div.mb2
      {:style {:padding 10
               :border  "1px solid tomato"}}
-     [domify-map (fn [v] [:span.code.f6 (pr-str v)]) non-views]
+     (into [:<>]
+           (map (fn [[k v]]
+                  (let [too-long? (> (count (str v)) 150)
+                        k'        (str k)
+                        pretty-v  [:div.overflow-scroll.code.f6.di
+                                   {:style {:max-height  200
+                                            :white-space :pre-wrap}}
+                                   (u/pretty-str v)]]
+                    (if too-long?
+                      [:details [:summary.outline-0 k'] pretty-v]
+                      [:div k' " " pretty-v])))
+                non-views))
      [child-views ent]]))
 
 (defrecord UIRoot
@@ -324,12 +328,18 @@
 (defn __temp-default-ent->ref [ent]
   (:id ent))
 
+(defn ->post-fixed-keyword
+  ([post-fix] (fn [x] (->post-fixed-keyword post-fix x)))
+  ([post-fix x]
+   (keyword (str (name x) post-fix))))
+
+;; todo configurable post-fix, configurable child component fn/wrapper, e.g. fragment :<>
 (defn- child-view-mappings [{:keys [child-keys]}]
-  (let [child-view-keys       (mapv #(keyword (str (name %) "-views")) child-keys)
-        child-view-keys->view (zipmap child-keys child-view-keys)]
-    {:child-keys          child-keys
-     :child-view-keys     child-view-keys
-     :child-key->view-key child-view-keys->view}))
+  (let [child-view-keys          (mapv (->post-fixed-keyword "-ui") child-keys)
+        child-view-keys->view    (zipmap child-keys child-view-keys)]
+    {:child-keys               child-keys
+     :child-view-keys          child-view-keys
+     :child-key->view-key      child-view-keys->view}))
 
 (defn ui-root
   [{:as   opts

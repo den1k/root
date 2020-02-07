@@ -1,7 +1,7 @@
 (ns root.impl.util
   (:require [expound.alpha :as exp]
-            [#?(:clj  clojure.spec.alpha
-                :cljs cljs.spec.alpha) :as s]))
+            [clojure.spec.alpha :as s]
+            [clojure.pprint :refer [pprint]]))
 
 (defn- spec-pred [fail-exp spec-fn spec x]
   (let [ret (spec-fn spec x)]
@@ -39,3 +39,15 @@
 
 (defn seek [pred coll]
   (some #(when (pred %) %) coll))
+
+(defn pretty-str [x]
+  (with-out-str (pprint x)))
+
+(defn deep-merge
+  "Merges data-structures recursively. For sequential colls, creates a union
+  using the same type as the first data-structure"
+  [& [x :as xs]]
+  (cond
+    (or (sequential? x) (set? x)) (into (empty x) cat xs)
+    (map? x) (apply merge-with deep-merge xs)))
+

@@ -7,11 +7,13 @@
    {:id 102 :type :about :markup ["OTHER STUFF"]}
    {:id      2 :type :todo-list :view :toggle-list :markup ["Shopping List"]
     :open?   true
+    :button  [110]
     :content [6 3 4 5]}
    {:id 3 :type :todo-item :markup ["Buy Bananas \uD83C\uDF4C️"]}
    {:id 4 :type :todo-item :markup ["Buy strawberries"]}
    {:id 5 :type :todo-item :checked? true :markup ["Buy Cabbage"]}
    {:id 6 :type :button :markup ["New Todo"] :handlers {:on-click [:todo-item :add]}}
+   {:id 110 :type :button :markup ["Test button 110"]}
    {:id 10 :content [11 12]}
    {:id 11 :type :button :markup ["undo"] :handlers {:on-click [:global :undo]}}
    {:id 12 :type :button :markup ["redo"] :handlers {:on-click [:global :redo]}}])

@@ -1,347 +1,59 @@
 (ns nested.views
   (:require [root.impl.resolver :as rr]
+            [xframe.core.alpha :as xf]
             [den1k.shortcuts :refer [shortcuts global-shortcuts]]
+            [uix.core.alpha :as uix]
             [uix.dom.alpha :as uix.dom]
             [root.impl.core :as rc]
-            [cljs.spec.alpha :as s]))
-(def data
-  "Result of running
+            [clojure.spec.alpha :as s]
+            [clojure.string :as str]
+            [cljs.js :as cljs]
+            [cljs.analyzer :as ana]
+            [goog.functions :as gfns]
+            [root.impl.util :as u]))
 
-  (map inc (range 10))
+(defn elide-env [env ast opts]
+  (dissoc ast :env))
 
-  https://swannodette.github.io/2015/07/29/clojurescript-17"
-  '{:op   :invoke,
-    :form (map inc (range 10)),
-    :f
-          {:form map,
-           :op   :var,
-           :info
-                 {:protocol-inline nil,
-                  :meta
-                                   {:file       "cljs/core.cljs",
-                                    :line       4167,
-                                    :column     7,
-                                    :end-line   4167,
-                                    :end-column 10,
-                                    :arglists
-                                                '([f] [f coll] [f c1 c2] [f c1 c2 c3] [f c1 c2 c3 & colls]),
-                                    :doc
-                                                "Returns a lazy sequence consisting of the result of applying f to\n  the set of first items of each coll, followed by applying f to the\n  set of second items in each coll, until any one of the colls is\n  exhausted.  Any remaining items in other colls are ignored. Function\n  f should accept number-of-colls arguments. Returns a transducer when\n  no collection is provided.",
-                                    :top-fn
-                                                {:variadic        true,
-                                                 :max-fixed-arity 4,
-                                                 :method-params   ([f] [f coll] [f c1 c2] [f c1 c2 c3]),
-                                                 :arglists
-                                                                  ([f] [f coll] [f c1 c2] [f c1 c2 c3] [f c1 c2 c3 & colls]),
-                                                 :arglists-meta   (nil nil nil nil nil)}},
-                  :ns              cljs.core,
-                  :name            cljs.core/map,
-                  :variadic        true,
-                  :file            "cljs/core.cljs",
-                  :end-column      10,
-                  :top-fn
-                                   {:variadic        true,
-                                    :max-fixed-arity 4,
-                                    :method-params   ([f] [f coll] [f c1 c2] [f c1 c2 c3]),
-                                    :arglists
-                                                     ([f] [f coll] [f c1 c2] [f c1 c2 c3] [f c1 c2 c3 & colls]),
-                                    :arglists-meta   (nil nil nil nil nil)},
-                  :method-params   ([f] [f coll] [f c1 c2] [f c1 c2 c3]),
-                  :protocol-impl   nil,
-                  :arglists-meta   (nil nil nil nil nil),
-                  :column          nil,
-                  :line            nil,
-                  :end-line        4167,
-                  :max-fixed-arity 4,
-                  :fn-var          true,
-                  :arglists
-                                   ([f] [f coll] [f c1 c2] [f c1 c2 c3] [f c1 c2 c3 & colls]),
-                  :doc
-                                   "Returns a lazy sequence consisting of the result of applying f to\n  the set of first items of each coll, followed by applying f to the\n  set of second items in each coll, until any one of the colls is\n  exhausted.  Any remaining items in other colls are ignored. Function\n  f should accept number-of-colls arguments. Returns a transducer when\n  no collection is provided."}},
-    :args
-          [{:form inc,
-            :op   :var,
-            :info
-                  {:protocol-inline nil,
-                   :meta
-                                    {:file       "cljs/core.cljs",
-                                     :line       1238,
-                                     :column     7,
-                                     :end-line   1238,
-                                     :end-column 10,
-                                     :arglists   '([x]),
-                                     :doc        "Returns a number one greater than num."},
-                   :ns              cljs.core,
-                   :name            cljs.core/inc,
-                   :variadic        false,
-                   :file            "cljs/core.cljs",
-                   :end-column      10,
-                   :method-params   ([x]),
-                   :protocol-impl   nil,
-                   :arglists-meta   (nil nil),
-                   :column          nil,
-                   :line            nil,
-                   :end-line        1238,
-                   :max-fixed-arity 1,
-                   :fn-var          true,
-                   :arglists        '([x]),
-                   :doc             "Returns a number one greater than num."}}
-           {:op   :invoke,
-            :form (range 10),
-            :f
-                  {:form range,
-                   :op   :var,
-                   :info
-                         {:protocol-inline nil,
-                          :meta
-                                           {:file       "cljs/core.cljs",
-                                            :line       8499,
-                                            :column     7,
-                                            :end-line   8499,
-                                            :end-column 12,
-                                            :arglists   '([] [end] [start end] [start end step]),
-                                            :doc
-                                                        "Returns a lazy seq of nums from start (inclusive) to end\n   (exclusive), by step, where start defaults to 0, step to 1,\n   and end to infinity.",
-                                            :top-fn
-                                                        {:variadic        false,
-                                                         :max-fixed-arity 3,
-                                                         :method-params   ([] [end] [start end] [start end step]),
-                                                         :arglists        ([] [end] [start end] [start end step]),
-                                                         :arglists-meta   (nil nil nil nil)}},
-                          :ns              cljs.core,
-                          :name            cljs.core/range,
-                          :variadic        false,
-                          :file            "cljs/core.cljs",
-                          :end-column      12,
-                          :top-fn
-                                           {:variadic        false,
-                                            :max-fixed-arity 3,
-                                            :method-params   ([] [end] [start end] [start end step]),
-                                            :arglists        ([] [end] [start end] [start end step]),
-                                            :arglists-meta   (nil nil nil nil)},
-                          :method-params   ([] [end] [start end] [start end step]),
-                          :protocol-impl   nil,
-                          :arglists-meta   (nil nil nil nil),
-                          :column          nil,
-                          :line            nil,
-                          :end-line        8499,
-                          :max-fixed-arity 3,
-                          :fn-var          true,
-                          :arglists        ([] [end] [start end] [start end step]),
-                          :doc
-                                           "Returns a lazy seq of nums from start (inclusive) to end\n   (exclusive), by step, where start defaults to 0, step to 1,\n   and end to infinity."}},
-            :args [{:op :constant, :form 10, :tag number}],
-            :children
-                  [{:form range,
-                    :op   :var,
-                    :info
-                          {:protocol-inline nil,
-                           :meta
-                                            {:file       "cljs/core.cljs",
-                                             :line       8499,
-                                             :column     7,
-                                             :end-line   8499,
-                                             :end-column 12,
-                                             :arglists   '([] [end] [start end] [start end step]),
-                                             :doc
-                                                         "Returns a lazy seq of nums from start (inclusive) to end\n   (exclusive), by step, where start defaults to 0, step to 1,\n   and end to infinity.",
-                                             :top-fn
-                                                         {:variadic        false,
-                                                          :max-fixed-arity 3,
-                                                          :method-params   ([] [end] [start end] [start end step]),
-                                                          :arglists        ([] [end] [start end] [start end step]),
-                                                          :arglists-meta   (nil nil nil nil)}},
-                           :ns              cljs.core,
-                           :name            cljs.core/range,
-                           :variadic        false,
-                           :file            "cljs/core.cljs",
-                           :end-column      12,
-                           :top-fn
-                                            {:variadic        false,
-                                             :max-fixed-arity 3,
-                                             :method-params   ([] [end] [start end] [start end step]),
-                                             :arglists        ([] [end] [start end] [start end step]),
-                                             :arglists-meta   (nil nil nil nil)},
-                           :method-params   ([] [end] [start end] [start end step]),
-                           :protocol-impl   nil,
-                           :arglists-meta   (nil nil nil nil),
-                           :column          nil,
-                           :line            nil,
-                           :end-line        8499,
-                           :max-fixed-arity 3,
-                           :fn-var          true,
-                           :arglists        ([] [end] [start end] [start end step]),
-                           :doc
-                                            "Returns a lazy seq of nums from start (inclusive) to end\n   (exclusive), by step, where start defaults to 0, step to 1,\n   and end to infinity."}}
-                   {:op :constant, :form 10, :tag number}],
-            :tag  any}],
-    :children
-          [{:form map,
-            :op   :var,
-            :info
-                  {:protocol-inline nil,
-                   :meta
-                                    {:file       "cljs/core.cljs",
-                                     :line       4167,
-                                     :column     7,
-                                     :end-line   4167,
-                                     :end-column 10,
-                                     :arglists
-                                                 '([f] [f coll] [f c1 c2] [f c1 c2 c3] [f c1 c2 c3 & colls]),
-                                     :doc
-                                                 "Returns a lazy sequence consisting of the result of applying f to\n  the set of first items of each coll, followed by applying f to the\n  set of second items in each coll, until any one of the colls is\n  exhausted.  Any remaining items in other colls are ignored. Function\n  f should accept number-of-colls arguments. Returns a transducer when\n  no collection is provided.",
-                                     :top-fn
-                                                 {:variadic        true,
-                                                  :max-fixed-arity 4,
-                                                  :method-params   ([f] [f coll] [f c1 c2] [f c1 c2 c3]),
-                                                  :arglists
-                                                                   ([f] [f coll] [f c1 c2] [f c1 c2 c3] [f c1 c2 c3 & colls]),
-                                                  :arglists-meta   (nil nil nil nil nil)}},
-                   :ns              cljs.core,
-                   :name            cljs.core/map,
-                   :variadic        true,
-                   :file            "cljs/core.cljs",
-                   :end-column      10,
-                   :top-fn
-                                    {:variadic        true,
-                                     :max-fixed-arity 4,
-                                     :method-params   ([f] [f coll] [f c1 c2] [f c1 c2 c3]),
-                                     :arglists
-                                                      ([f] [f coll] [f c1 c2] [f c1 c2 c3] [f c1 c2 c3 & colls]),
-                                     :arglists-meta   (nil nil nil nil nil)},
-                   :method-params   ([f] [f coll] [f c1 c2] [f c1 c2 c3]),
-                   :protocol-impl   nil,
-                   :arglists-meta   (nil nil nil nil nil),
-                   :column          nil,
-                   :line            nil,
-                   :end-line        4167,
-                   :max-fixed-arity 4,
-                   :fn-var          true,
-                   :arglists
-                                    ([f] [f coll] [f c1 c2] [f c1 c2 c3] [f c1 c2 c3 & colls]),
-                   :doc
-                                    "Returns a lazy sequence consisting of the result of applying f to\n  the set of first items of each coll, followed by applying f to the\n  set of second items in each coll, until any one of the colls is\n  exhausted.  Any remaining items in other colls are ignored. Function\n  f should accept number-of-colls arguments. Returns a transducer when\n  no collection is provided."}}
-           {:form inc,
-            :op   :var,
-            :info
-                  {:protocol-inline nil,
-                   :meta
-                                    {:file       "cljs/core.cljs",
-                                     :line       1238,
-                                     :column     7,
-                                     :end-line   1238,
-                                     :end-column 10,
-                                     :arglists   '([x]),
-                                     :doc        "Returns a number one greater than num."},
-                   :ns              cljs.core,
-                   :name            cljs.core/inc,
-                   :variadic        false,
-                   :file            "cljs/core.cljs",
-                   :end-column      10,
-                   :method-params   ([x]),
-                   :protocol-impl   nil,
-                   :arglists-meta   (nil nil),
-                   :column          nil,
-                   :line            nil,
-                   :end-line        1238,
-                   :max-fixed-arity 1,
-                   :fn-var          true,
-                   :arglists        '([x]),
-                   :doc             "Returns a number one greater than num."}}
-           {:op   :invoke,
-            :form (range 10),
-            :f
-                  {:form range,
-                   :op   :var,
-                   :info
-                         {:protocol-inline nil,
-                          :meta
-                                           {:file       "cljs/core.cljs",
-                                            :line       8499,
-                                            :column     7,
-                                            :end-line   8499,
-                                            :end-column 12,
-                                            :arglists   '([] [end] [start end] [start end step]),
-                                            :doc
-                                                        "Returns a lazy seq of nums from start (inclusive) to end\n   (exclusive), by step, where start defaults to 0, step to 1,\n   and end to infinity.",
-                                            :top-fn
-                                                        {:variadic        false,
-                                                         :max-fixed-arity 3,
-                                                         :method-params   ([] [end] [start end] [start end step]),
-                                                         :arglists        ([] [end] [start end] [start end step]),
-                                                         :arglists-meta   (nil nil nil nil)}},
-                          :ns              cljs.core,
-                          :name            cljs.core/range,
-                          :variadic        false,
-                          :file            "cljs/core.cljs",
-                          :end-column      12,
-                          :top-fn
-                                           {:variadic        false,
-                                            :max-fixed-arity 3,
-                                            :method-params   ([] [end] [start end] [start end step]),
-                                            :arglists        ([] [end] [start end] [start end step]),
-                                            :arglists-meta   (nil nil nil nil)},
-                          :method-params   ([] [end] [start end] [start end step]),
-                          :protocol-impl   nil,
-                          :arglists-meta   (nil nil nil nil),
-                          :column          nil,
-                          :line            nil,
-                          :end-line        8499,
-                          :max-fixed-arity 3,
-                          :fn-var          true,
-                          :arglists        ([] [end] [start end] [start end step]),
-                          :doc
-                                           "Returns a lazy seq of nums from start (inclusive) to end\n   (exclusive), by step, where start defaults to 0, step to 1,\n   and end to infinity."}},
-            :args [{:op :constant, :form 10, :tag number}],
-            :children
-                  [{:form range,
-                    :op   :var,
-                    :info
-                          {:protocol-inline nil,
-                           :meta
-                                            {:file       "cljs/core.cljs",
-                                             :line       8499,
-                                             :column     7,
-                                             :end-line   8499,
-                                             :end-column 12,
-                                             :arglists   '([] [end] [start end] [start end step]),
-                                             :doc
-                                                         "Returns a lazy seq of nums from start (inclusive) to end\n   (exclusive), by step, where start defaults to 0, step to 1,\n   and end to infinity.",
-                                             :top-fn
-                                                         {:variadic        false,
-                                                          :max-fixed-arity 3,
-                                                          :method-params   ([] [end] [start end] [start end step]),
-                                                          :arglists        ([] [end] [start end] [start end step]),
-                                                          :arglists-meta   (nil nil nil nil)}},
-                           :ns              cljs.core,
-                           :name            cljs.core/range,
-                           :variadic        false,
-                           :file            "cljs/core.cljs",
-                           :end-column      12,
-                           :top-fn
-                                            {:variadic        false,
-                                             :max-fixed-arity 3,
-                                             :method-params   ([] [end] [start end] [start end step]),
-                                             :arglists        ([] [end] [start end] [start end step]),
-                                             :arglists-meta   (nil nil nil nil)},
-                           :method-params   ([] [end] [start end] [start end step]),
-                           :protocol-impl   nil,
-                           :arglists-meta   (nil nil nil nil),
-                           :column          nil,
-                           :line            nil,
-                           :end-line        8499,
-                           :max-fixed-arity 3,
-                           :fn-var          true,
-                           :arglists        ([] [end] [start end] [start end step]),
-                           :doc
-                                            "Returns a lazy seq of nums from start (inclusive) to end\n   (exclusive), by step, where start defaults to 0, step to 1,\n   and end to infinity."}}
-                   {:op :constant, :form 10, :tag number}],
-            :tag  any}],
-    :tag  any}
-  )
+(def ex2-src
+  #_"(+ 1 1)"
+  "(into
+     [:<>]
+     (map (fn [s] [:span.h3 s]))
+     [\"a\" \"b\" \"c\"])")
+
+(def st (cljs/empty-state))
+
+(defn ana-str [str cb]
+  (cljs/analyze-str st str nil
+                    {:passes [ana/infer-type elide-env]}
+                    (fn [{:keys [error value] :as res}]
+                      (cb res))))
 
 
-;(reset! rc/state temp-fit-data)
+#_(ana-str ex2-src (fn [{:keys [value error]}]
+                     (println value)
+                     (js/console.log value)))
+
+(defonce _
+  (ana-str ex2-src (fn [{:keys [value error]}]
+                     (reset! rc/state value))))
+
+(xf/reg-sub :get-in
+  (fn [path]
+    (get-in (xf/<- [::xf/db]) path)))
+
+(defn lookup [x]
+  (cond
+    (vector? x) (get-in (xf/<- [::xf/db]) x)
+    (map? x) x))
+
+
+(defn lookup-sub [x]
+  (cond
+    (vector? x) (xf/<sub [:get-in x])
+    (map? x) x))
+
 
 (def state
   "pseudo-AST"
@@ -370,17 +82,17 @@
 ;(s/def ::content ::nested-content)
 ;(rr/get-keys-spec ::nested-entity)
 ;(rr/filter-spec-keys-from-keys-spec ::content ::nested-entity)
-#_(rc/child-view-mappings {:entity-spec ::nested-entity
-                         :resolve-spec  ::content})
+#_(rc/child-view-mappings {:entity-spec  ::nested-entity
+                           :resolve-spec ::content})
 (def root (rc/ui-root
-           {#_#_:invoke-fn (fn invoke [f x]
-                             [f x])
-            :lookup         (fn [x]
-                              (cond
-                                (map? x) x
-                                (nil? x) state
-                                (vector? x) (get-in state x)))
-            :child-keys     [:content]
+           {:invoke-fn      (fn invoke [f x]
+                              #_(js/console.log :op (:op x) x)
+                              #_(js/console.log :INCO (:path x) x)
+                              ^{:key (:path x)}
+                              [f x])
+            :lookup         lookup
+            :lookup-sub     lookup-sub
+            :child-keys     [:fn :args :items :vals :keys :statements :ret :test :then :else]
             :resolve-spec   ::content
             ;:lookup-sub     lookup-sub
             :ent->view-name :op
@@ -389,17 +101,163 @@
             ;:add-id         rc/add-id
             }))
 
+(defn ana-ent->css-classes [{:as ent :keys [op tag form]}]
+  (cond
+    (= tag 'cljs.core/Keyword) [:green]
+    ;(= tag 'cljs.core/IVector) [:mv1 :pv1]
+    (or (= form 'fn)
+        (= form 'defn)) [:orange :b]
+    (= tag 'string) [:light-red]
+    (= tag 'number) [:blue]
+    (= op :var) [:b]
+    :else []))
+
+(defn ent->handlers [{:as ent :keys [form path tag op children-ui]}]
+  {:on-input
+   (fn [e]
+     (js/console.log :ent ent
+                     :at-path (get-in @rc/state (conj path :form))
+                     :path path
+                     (str/trim (-> e .-target .-textContent)))
+     (let [text (-> e .-target .-textContent)]
+       (js/console.log :text text)
+       (swap! rc/state
+              assoc-in
+              (conj path :form)
+              (cond
+                (= op :var) (symbol text)
+                :else (some-> text cljs.reader/read-string))))
+     ;(xf/notify-listeners!)
+     (.stopPropagation e)
+     (.preventDefault e)
+
+     )
+   :content-editable
+   true
+   :suppressContentEditableWarning
+   true})
+
+(defn ana-ent->css-styles [{:as ent :keys [op path]}]
+  (case op
+    (:vector :invoke) {:padding-right 2
+                       :background    (str "hsl(" (int (/ 360 (count path))) ", 100%, 95%)")}
+    nil))
+
+(defn ent->styles [ent]
+  {:class (ana-ent->css-classes ent)
+   :style (ana-ent->css-styles ent)})
+
+(defn editable-view
+  [{:as ent :keys [form path tag op]}
+   {:keys [omit-styles? form-print-fn]
+    :or   {form-print-fn pr-str}}]
+  [:span {:content-editable false}
+   [:span.outline-0
+    (merge (ent->styles ent)
+           (ent->handlers ent))
+    (u/pretty-str form)]])
+
+(root :view :invoke
+  (fn [{:as ent :keys [fn-ui args-ui path fn]}]
+    (let [[arg0-ui & next-args-ui :as args-ui'] (next args-ui)
+          fn-sym   (:form fn)
+          fn-defn? (contains? #{'defn 'fn} fn-sym)]
+      (when fn-defn? (js/console.log :defn ent))
+      [:div.flex.flex-wrap.br1
+       ;(ent->styles ent)
+       "("
+       fn-ui
+       (when fn-defn? [:span.pl2 arg0-ui])
+       (if-let [more-args-ui (some-> (interpose [:span.pl2] (if fn-defn?
+                                                              next-args-ui
+                                                              args-ui'))
+                                     not-empty
+                                     vec
+                                     (conj [:span.self-end ")"]))]
+         (into [:div.flex.flex-wrap.ml2
+                (u/deep-merge {:class [(when fn-defn? :w-100)]}
+                              #_(ent->styles ent))]
+               more-args-ui)
+         [:span.self-end ")"])])))
+
+
+(root :view :var editable-view)
+(root :view :js-var editable-view)
+(root :view :const editable-view)
+(root :view :if
+  (fn [{:as ent :keys [test-ui then-ui else-ui]}]
+    [:div.flex.flex-column.br1
+     ;(ent->styles ent)
+     [:div "(if " test-ui]
+     then-ui
+     else-ui]
+    ))
+
+(root :view :map
+  (fn [{:as ent :keys [path keys-ui vals-ui]}]
+    [:div.flex
+     "{"
+     [:span.flex.flex-column
+      (map (fn [[k v]] [:span.flex.flex-wrap k [:span.pl2] v])
+           (partition 2 (interleave (next keys-ui) (next vals-ui))))]
+     [:span.self-end "}"]]))
+
+(root :view :do
+  (fn [{:as ent :keys [fn-ui args-ui path statements-ui ret-ui]}]
+    (let [[_ & statements-ui'] statements-ui]
+      [:div.flex.br1
+       ;(ent->styles ent)
+       "(do"
+       (into [:div.flex.flex-wrap
+              #_(ent->styles ent)] (map (fn [x] [:span.pl2 x]))
+             (conj (vec statements-ui')
+                   [:div.bg-gold.ph1 ret-ui]))
+       [:span.self-end ")"]])))
+
+(root :view :vector
+  (fn [{:as ent :keys [items-ui]}]
+    (let [[_ fui & items-ui'] items-ui]
+      [:span {:content-editable false}
+       [:div.outline-0.flex.flex-wrap.br1 ;.mv1
+        (merge (ent->handlers ent)
+               #_(ent->styles ent))
+        "[" (into [:<> fui] (map (fn [x] [:span.pl2 x]) items-ui'))
+        [:span.self-end "]"]]])))
+
+(defonce str-state (atom ex2-src))
+
+(def debounce-set-ana-str
+  (gfns/debounce #(ana-str @str-state
+                           (fn [{:keys [value error]}]
+                             (when value
+                               (js/console.log :SETTING)
+                               (reset! rc/state value)
+                               (xf/notify-listeners!))))
+                 200))
+
+(defn paste-code-box []
+  [:textarea.vh-100.w-40.outline-0.bn.pa3
+   {:default-value @str-state
+    :on-change     (fn [e]
+                     (let [text (-> e .-target .-value)]
+                       (reset! str-state text)
+                       (debounce-set-ana-str)))}])
+
 (defn render-example []
+  (xf/notify-listeners!)
   (uix.dom/render
-   [rr/nested-resolved-view root {:path []}]
-   ;[:h1 "hello"]
+   [:div.flex
+    [paste-code-box]
+    [:div.code.pre.pa3.outline-0.w-60.bl.f6.lh-copy
+     {:autoFocus                         true
+      :content-editable                  true
+      :suppress-content-editable-warning true}
+     [rr/nested-resolved-view root {:path []}]]]
    (. js/document (getElementById "app"))))
 
 
-#_(-> (rr/nested-resolved-view root {:entity {:op      range
-                                              :form    range
-                                              :content [{:op :constant :form 10}]}})
-      (get 6)
-      (get 2)
-      first
-      ifn?)
+
+
+
+
+

@@ -109,7 +109,7 @@
    (first markup)])
 
 (root :view :toggle-list
-  (fn [{:as ent :keys [id markup content-views open?]}]
+  (fn [{:as ent :keys [id markup content-ui open?]}]
     [block ent
      (cond-> [:div
               [:div.flex.items-center
@@ -127,10 +127,10 @@
                   :on-click #(root :transact [[:toggle :open? ent]])}
                  "▶"]]
                [input {} ent]]]
-       open? (conj content-views))]))
+       open? (conj content-ui))]))
 
 (root :view :nav
-  (fn [{:as ent :keys [content-views routes]}]
+  (fn [{:as ent :keys [content-ui routes]}]
     [:div
      [:nav.db.dt-l.w-100.border-box.pa3.ph5-l
       (subs (str (.getTime (js/Date.))) 9)
@@ -144,7 +144,7 @@
             :on-click #(root :transact [[:set (assoc ent :content v)]] {:history? false})}
            (name k)]))
        routes)]
-     content-views]))
+     content-ui]))
 
 (root :view :todo-item
   (fn
