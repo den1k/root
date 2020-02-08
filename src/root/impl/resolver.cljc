@@ -31,7 +31,7 @@
            (assoc out k
                       (resolve-content
                        root
-                       content-k              ;; maybe wrong
+                       content-k        ;; maybe wrong
                        v
                        (comp
                         f
@@ -49,9 +49,11 @@
   ([{:as root :keys [child-keys child-key->view-key]} ent f]
    (reduce
     (fn [out chk]
-      (if-let [ch (not-empty (chk ent))]
-        (assoc out (child-key->view-key chk) (resolve-content root chk ch f))
-        out))
+      (let [ch    (chk ent)
+            coll? (coll? ch)]
+        (if (or (and coll? (not-empty ch)) (and (not coll?) (some? ch)))
+          (assoc out (child-key->view-key chk) (resolve-content root chk ch f))
+          out)))
     ent
     child-keys)))
 
