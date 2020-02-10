@@ -5,17 +5,28 @@
             [clojure.spec.alpha :as s])
   #?(:clj (:import clojure.lang.Cons)))
 
+(defn- ->resolver-spec [content-spec]
+  (let [content-spec    (s/spec content-spec)
+        nested-contents (s/coll-of content-spec)
+        contents-map    (s/map-of keyword?
+                                  (s/or :entity content-spec
+                                        :entities nested-contents))]
+    (s/spec
+     (s/or :content content-spec
+           :contents nested-contents
+           :content-map contents-map))))
+
 (defn resolve-content
   ([root content-k content] (resolve-content root content-k content identity))
-  ([{:as root :keys [resolve-spec]} content-k content f]
+  ([{:as root :keys [resolve-spec contents-hiccup-wrapper]} content-k content f]
    (let [[type refs*] (u/conform! resolve-spec content)]
      (case type
-       (:entity :ref)
+       :content
        (with-meta (f {:content-k content-k
                       :id-or-ent refs*}) {::type :entity})
 
-       (:entities :refs)
-       (with-meta (into [:<>]
+       :contents
+       (with-meta (into contents-hiccup-wrapper
                         (map-indexed
                          (fn [k ref]
                            (f {:k         k
@@ -24,7 +35,7 @@
                         refs*)
                   {::type :entities})
 
-       (:entities-map :refs-map)
+       :content-map
        (with-meta
         (reduce-kv
          (fn [out k v]

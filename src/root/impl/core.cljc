@@ -193,13 +193,18 @@
        (run-tx root ctx)))
    (xf/notify-listeners!)))
 
+(defn- remove-fragment [[v1 & views :as all-views]]
+  (if (= :<> v1)
+    views
+    all-views))
+
 (defn default-child-view [views]
   (let [padded-view [:div {:style {:padding      5
                                    :padding-left 10
                                    :margin-top   5}}]]
     (case (::rr/type (meta views))
       :entity (conj padded-view views)
-      :entities (conj padded-view views)
+      :entities (into padded-view (remove-fragment views))
       :entity-map (into padded-view
                         (map
                          (fn [[k child-or-children]]
@@ -233,7 +238,7 @@
               :border  "1px solid tomato"}}
      (into [:<>]
            (map (fn [[k v]]
-                  (let [too-long? (> (count (str v)) 150)
+                  (let [too-long? (> (count (str v)) 140)
                         k'        (str k)
                         pretty-v  [:div.overflow-scroll.code.f6.di
                                    {:style {:max-height  200
@@ -299,12 +304,14 @@
 (s/def ::dispatch-fn ifn?)
 (s/def ::lookup ifn?)
 (s/def ::lookup-sub ifn?)
+(s/def ::content-keys (s/coll-of keyword?))
+(s/def ::content-spec (s/or :fn ifn? :spec s/spec?))
 (s/def ::->ref ifn?)
 (s/def ::transact ifn?)
 (s/def ::add-id ifn?)
 
 (s/def ::ui-root-static
-  (s/keys :req-un [::dispatch-fn ::lookup]))
+  (s/keys :req-un [::dispatch-fn ::lookup ::content-spec ::content-keys]))
 
 (s/def ::ui-root-reactive
   (s/and ::ui-root-static (s/keys :req-un [::lookup-sub])))
@@ -333,7 +340,6 @@
   ([post-fix x]
    (keyword (str (name x) post-fix))))
 
-;; todo configurable post-fix, configurable child component fn/wrapper, e.g. fragment :<>
 (defn- child-view-mappings [{:keys [content-keys content-post-fix]
                              :or   {content-post-fix "-ui"}}]
   (let [content-ui-keys     (mapv (->post-fixed-keyword content-post-fix) content-keys)
@@ -342,17 +348,19 @@
      :content-ui-keys     content-ui-keys
      :content-key->ui-key content-key->ui-key}))
 
+(def ^:private default-opts {:content-post-fix        "-ui"
+                             :contents-hiccup-wrapper [:<>]})
+
 (defn ui-root
   [{:as   opts
-    :keys [dispatch-fn default-view invoke-fn lookup lookup-sub ->ref
-           content-keys
-           resolve-spec]
+    :keys [dispatch-fn default-view invoke-fn lookup lookup-sub ->ref content-spec]
     :or   {default-view default-view*
-           ->ref        __temp-default-ent->ref
-           resolve-spec ::ent/refs}}]
-  ;; todo content-keys warn
+           ->ref        __temp-default-ent->ref}}]
   (opts-warn opts)
-  (let [opts (merge opts {:resolve-spec resolve-spec})]
+  (let [opts (merge
+              default-opts
+              opts
+              {:resolve-spec (rr/->resolver-spec content-spec)})]
     (map->UIRoot
      (merge
       (view-multi-dispatch

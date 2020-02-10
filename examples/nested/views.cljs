@@ -54,19 +54,6 @@
     (vector? x) (xf/<sub [:get-in x])
     (map? x) x))
 
-
-(def state
-  "pseudo-AST"
-  '{:op      :invoke
-    :form    (map inc (range 10))
-    :content [{:op   map
-               :form map}
-              {:op   inc
-               :form inc}
-              {:op      range
-               :form    range
-               :content [{:op :constant :form 10}]}]})
-
 (s/def ::nested-entity map?)
 (s/def ::nested-entities (s/coll-of ::nested-entity))
 (s/def ::entities-map
@@ -93,7 +80,9 @@
             :lookup       lookup
             :lookup-sub   lookup-sub
             :content-keys [:fn :args :items :vals :keys :statements :ret :test :then :else]
+            :content-spec (s/and map? (fn [x] (:op x)))
             :resolve-spec ::content
+            :contents-hiccup-wrapper []
             ;:lookup-sub     lookup-sub
             :dispatch-fn  :op
             ;:transact       rc/transact
@@ -159,7 +148,7 @@
 
 (root :view :invoke
   (fn [{:as ent :keys [fn-ui args-ui path fn]}]
-    (let [[arg0-ui & next-args-ui :as args-ui'] (next args-ui)
+    (let [[arg0-ui & next-args-ui :as args-ui'] args-ui
           fn-sym   (:form fn)
           fn-defn? (contains? #{'defn 'fn} fn-sym)]
       (when fn-defn? (js/console.log :defn ent))
@@ -199,24 +188,23 @@
      "{"
      [:span.flex.flex-column
       (map (fn [[k v]] [:span.flex.flex-wrap k [:span.pl2] v])
-           (partition 2 (interleave (next keys-ui) (next vals-ui))))]
+           (partition 2 (interleave keys-ui vals-ui)))]
      [:span.self-end "}"]]))
 
 (root :view :do
   (fn [{:as ent :keys [fn-ui args-ui path statements-ui ret-ui]}]
-    (let [[_ & statements-ui'] statements-ui]
-      [:div.flex.br1
-       ;(ent->styles ent)
-       "(do"
-       (into [:div.flex.flex-wrap
-              #_(ent->styles ent)] (map (fn [x] [:span.pl2 x]))
-             (conj (vec statements-ui')
-                   [:div.bg-gold.ph1 ret-ui]))
-       [:span.self-end ")"]])))
+    [:div.flex.br1
+     ;(ent->styles ent)
+     "(do"
+     (into [:div.flex.flex-wrap
+            #_(ent->styles ent)] (map (fn [x] [:span.pl2 x]))
+           (conj statements-ui
+                 [:div.bg-gold.ph1 ret-ui]))
+     [:span.self-end ")"]]))
 
 (root :view :vector
   (fn [{:as ent :keys [items-ui]}]
-    (let [[_ fui & items-ui'] items-ui]
+    (let [[fui & items-ui'] items-ui]
       [:span {:content-editable false}
        [:div.outline-0.flex.flex-wrap.br1 ;.mv1
         (merge (ent->handlers ent)

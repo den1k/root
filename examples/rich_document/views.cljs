@@ -53,6 +53,7 @@
             :dispatch-fn    (fn [x] (or (:view x) (:type x)))
             :transact       rc/transact
             :content-keys   [:content]
+            :content-spec   integer?
             :entity-actions entity-actions
             :add-id         rc/add-id}))
 
