@@ -35,12 +35,12 @@
   (xf/<sub [:get id]))
 
 (def root (rc/ui-root
-           {:ent->ref       rc/ent->ref
+           {:->ref          rc/ent->ref
             :invoke-fn      (fn invoke [f x]
                               ^{:key (rc/ent->ref x)}
                               [f x])
             :lookup         lookup
-            :ent->view-name :type
+            :dispatch-fn    :type
             :transact       rc/transact
             :entity-actions entity-actions
             :add-id         rc/add-id}))

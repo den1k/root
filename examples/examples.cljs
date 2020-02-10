@@ -1,7 +1,7 @@
 (ns examples
   (:require
-   ;[rich-document.views :as rich-doc]
-   [nested.views :as nested-views]
+   [rich-document.views :as rich-doc]
+   ;[nested.views :as nested-views]
             ;[debug.core :as debug-example]
    #_[mixed-media.core :as mixed-media]))
 
@@ -9,8 +9,8 @@
 (defn start []
   ;(mixed-media/render-example)
   ;(debug-example/render-example)
-  ;(rich-doc/render-example)
-  (nested.views/render-example)
+  (rich-doc/render-example)
+  ;(nested.views/render-example)
   )
 
 (defn ^:export init []

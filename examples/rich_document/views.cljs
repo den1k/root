@@ -43,15 +43,16 @@
   (xf/<sub [:get id]))
 
 (def root (rc/ui-root
-           {:ent->ref       ent->ref
+           {:->ref          ent->ref
             :invoke-fn      (fn invoke [f x]
+                              (js/console.log :ent x)
                               ^{:key (ent->ref x)}
                               [f x])
             :lookup         lookup
             :lookup-sub     lookup-sub
-            :ent->view-name (fn [x] (or (:view x) (:type x)))
+            :dispatch-fn    (fn [x] (or (:view x) (:type x)))
             :transact       rc/transact
-            :child-keys     [:content]
+            :content-keys   [:content]
             :entity-actions entity-actions
             :add-id         rc/add-id}))
 
@@ -73,7 +74,7 @@
           "remove"]
          (into
           [:select
-           {:value     (name ((:ent->view-name root) ent))
+           {:value     (name ((:dispatch-fn root) ent))
             :on-change #(let [opt-kw (-> % .-target .-value keyword)]
                           (root :transact [[:set (assoc ent :type opt-kw)]]))}]
           (map (fn [x] [:option {:value x} x]))

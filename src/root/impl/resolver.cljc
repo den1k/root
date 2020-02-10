@@ -46,16 +46,16 @@
 
 (defn resolve-child-views
   ([root ent] (resolve-child-views root ent identity))
-  ([{:as root :keys [child-keys child-key->view-key]} ent f]
+  ([{:as root :keys [content-keys content-key->ui-key]} ent f]
    (reduce
     (fn [out chk]
       (let [ch    (chk ent)
             coll? (coll? ch)]
         (if (or (and coll? (not-empty ch)) (and (not coll?) (some? ch)))
-          (assoc out (child-key->view-key chk) (resolve-content root chk ch f))
+          (assoc out (content-key->ui-key chk) (resolve-content root chk ch f))
           out)))
     ent
-    child-keys)))
+    content-keys)))
 
 (s/def ::txs-path (s/coll-of keyword?))
 
@@ -79,7 +79,7 @@
         :path ::txs-path))
 
 (defn wrap-actions-and-handlers
-  [{:as root :keys [transact entity-actions add-id ent->ref]}
+  [{:as root :keys [transact entity-actions add-id ->ref]}
    {:as orig-ent :keys [type actions handlers parent-id]}]
   (letfn [(resolve-txs [conformed txs-or-txs-path]
             (case (first conformed)
@@ -90,7 +90,7 @@
               (cond-> [op]
                 path (conj (replace {:<- parent-id} path))
                 (not path) (conj (:path orig-ent))
-                ent (conj (cond-> ent (nil? (ent->ref ent)) add-id))
+                ent (conj (cond-> ent (nil? (->ref ent)) add-id))
                 (not ent) (conj orig-ent))))
           (form-txs [txs]
             (mapv form-tx txs))

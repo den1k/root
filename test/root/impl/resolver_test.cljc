@@ -7,9 +7,9 @@
 
 (def test-root
   (rc/ui-root
-   {:ent->ref       mock/->ref
+   {:->ref          mock/->ref
     :lookup         mock/lookup
-    :ent->view-name (fn [x] (or (:view x) (:type x)))
+    :dispatch-fn    (fn [x] (or (:view x) (:type x)))
     ;; overwrite for testing
     :transact       (constantly ::transacted)
     :entity-actions mock/entity-actions

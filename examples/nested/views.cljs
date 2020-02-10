@@ -85,17 +85,17 @@
 #_(rc/child-view-mappings {:entity-spec  ::nested-entity
                            :resolve-spec ::content})
 (def root (rc/ui-root
-           {:invoke-fn      (fn invoke [f x]
-                              #_(js/console.log :op (:op x) x)
-                              #_(js/console.log :INCO (:path x) x)
-                              ^{:key (:path x)}
-                              [f x])
-            :lookup         lookup
-            :lookup-sub     lookup-sub
-            :child-keys     [:fn :args :items :vals :keys :statements :ret :test :then :else]
-            :resolve-spec   ::content
+           {:invoke-fn    (fn invoke [f x]
+                            #_(js/console.log :op (:op x) x)
+                            #_(js/console.log :INCO (:path x) x)
+                            ^{:key (:path x)}
+                            [f x])
+            :lookup       lookup
+            :lookup-sub   lookup-sub
+            :content-keys [:fn :args :items :vals :keys :statements :ret :test :then :else]
+            :resolve-spec ::content
             ;:lookup-sub     lookup-sub
-            :ent->view-name :op
+            :dispatch-fn  :op
             ;:transact       rc/transact
             ;:entity-actions entity-actions
             ;:add-id         rc/add-id
@@ -164,7 +164,7 @@
           fn-defn? (contains? #{'defn 'fn} fn-sym)]
       (when fn-defn? (js/console.log :defn ent))
       [:div.flex.flex-wrap.br1
-       ;(ent->styles ent)
+       (ent->styles ent)
        "("
        fn-ui
        (when fn-defn? [:span.pl2 arg0-ui])
@@ -176,7 +176,7 @@
                                      (conj [:span.self-end ")"]))]
          (into [:div.flex.flex-wrap.ml2
                 (u/deep-merge {:class [(when fn-defn? :w-100)]}
-                              #_(ent->styles ent))]
+                              (ent->styles ent))]
                more-args-ui)
          [:span.self-end ")"])])))
 

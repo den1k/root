@@ -88,8 +88,8 @@
 (defmulti run-tx (fn [_root tx] (:op tx)))
 
 (defmethod run-tx :add
-  [{:as root :keys [ent->ref+ent]} {:as tx :keys [path ent]}]
-  (let [[ref :as ref+ent] (ent->ref+ent ent)]
+  [{:as root :keys [->ref+x]} {:as tx :keys [path ent]}]
+  (let [[ref :as ref+ent] (->ref+x ent)]
     (swap! state
            (fn [st]
              (-> st
@@ -115,8 +115,8 @@
             seq))))
 
 (defmethod run-tx :add-after
-  [{:as root :keys [ent->ref+ent]} {:keys [path ent]}]
-  (let [[ref :as ref+ent] (ent->ref+ent ent)]
+  [{:as root :keys [->ref+x]} {:keys [path ent]}]
+  (let [[ref :as ref+ent] (->ref+x ent)]
     (swap! state
            (fn [st]
              (-> st
@@ -126,8 +126,8 @@
                  (conj ref+ent))))))
 
 (defmethod run-tx :remove
-  [{:as root :keys [ent->ref]} {:keys [path ent]}]
-  (let [ref      (ent->ref ent)
+  [{:as root :keys [->ref]} {:keys [path ent]}]
+  (let [ref      (->ref ent)
         ent-path (:path ent)]
     (swap! state
            (fn [st]
@@ -141,8 +141,8 @@
                  (dissoc ref))))))
 
 (defmethod run-tx :remove-after
-  [{:as root :keys [ent->ref]} {:keys [path ent]}]
-  (let [ref (ent->ref ent)]
+  [{:as root :keys [->ref]} {:keys [path ent]}]
+  (let [ref (->ref ent)]
     (swap! state
            (fn [st]
              (-> st
@@ -150,8 +150,8 @@
                  (dissoc ref))))))
 
 (defmethod run-tx :set
-  [{:as root :keys [ent->ref+ent]} {:keys [path ent]}]
-  (let [ref+ent (ent->ref+ent ent)]
+  [{:as root :keys [->ref+x]} {:keys [path ent]}]
+  (let [ref+ent (->ref+x ent)]
     (swap! state
            (fn [st]
              (-> st (conj ref+ent))))))
@@ -173,8 +173,8 @@
 (s/def ::txs (s/coll-of ::tx))
 
 (defmethod run-tx :toggle
-  [{:as root :keys [ent->ref]} {:keys [path ent]}]
-  (let [ref (ent->ref ent)]
+  [{:as root :keys [->ref]} {:keys [path ent]}]
+  (let [ref (->ref ent)]
     ;; path can be nil
     (swap! state update-in (concat [ref] path) not)))
 
@@ -218,7 +218,7 @@
 
 (defn child-views [ent]
   (let [root (-> ent meta :root)]
-    (when-let [child-views (not-empty (select-keys ent (:child-view-keys root)))]
+    (when-let [child-views (not-empty (select-keys ent (:content-ui-keys root)))]
       [domify-map default-child-view child-views])))
 
 (defn default-view* [ent]
@@ -226,7 +226,7 @@
   (let [root      (-> ent meta :root)
         non-views (apply dissoc ent
                          :actions :path :parent-id :handlers
-                         (concat (:child-keys root) (:child-view-keys root)))]
+                         (concat (:content-keys root) (:content-ui-keys root)))]
 
     [:div.mb2
      {:style {:padding 10
@@ -296,21 +296,21 @@
 
 ;; Root config specs
 
-(s/def ::ent->view-name ifn?)
+(s/def ::dispatch-fn ifn?)
 (s/def ::lookup ifn?)
 (s/def ::lookup-sub ifn?)
-(s/def ::ent->ref ifn?)
+(s/def ::->ref ifn?)
 (s/def ::transact ifn?)
 (s/def ::add-id ifn?)
 
 (s/def ::ui-root-static
-  (s/keys :req-un [::ent->view-name ::lookup]))
+  (s/keys :req-un [::dispatch-fn ::lookup]))
 
 (s/def ::ui-root-reactive
   (s/and ::ui-root-static (s/keys :req-un [::lookup-sub])))
 
 (s/def ::ui-root-dynamic
-  (s/and ::ui-root-reactive (s/keys :req-un [::transact ::add-id ::ent->ref])))
+  (s/and ::ui-root-reactive (s/keys :req-un [::transact ::add-id ::->ref])))
 
 (s/def ::ui-root
   (s/or :dynamic ::ui-root-dynamic
@@ -334,34 +334,33 @@
    (keyword (str (name x) post-fix))))
 
 ;; todo configurable post-fix, configurable child component fn/wrapper, e.g. fragment :<>
-(defn- child-view-mappings [{:keys [child-keys]}]
-  (let [child-view-keys          (mapv (->post-fixed-keyword "-ui") child-keys)
-        child-view-keys->view    (zipmap child-keys child-view-keys)]
-    {:child-keys               child-keys
-     :child-view-keys          child-view-keys
-     :child-key->view-key      child-view-keys->view}))
+(defn- child-view-mappings [{:keys [content-keys content-post-fix]
+                             :or   {content-post-fix "-ui"}}]
+  (let [content-ui-keys     (mapv (->post-fixed-keyword content-post-fix) content-keys)
+        content-key->ui-key (zipmap content-keys content-ui-keys)]
+    {:content-keys        content-keys
+     :content-ui-keys     content-ui-keys
+     :content-key->ui-key content-key->ui-key}))
 
 (defn ui-root
   [{:as   opts
-    :keys [ent->view-name default-view invoke-fn lookup lookup-sub ent->ref
-           child-keys
+    :keys [dispatch-fn default-view invoke-fn lookup lookup-sub ->ref
+           content-keys
            resolve-spec]
     :or   {default-view default-view*
-           ent->ref     __temp-default-ent->ref
+           ->ref        __temp-default-ent->ref
            resolve-spec ::ent/refs}}]
-  ;; todo child-keys warn
+  ;; todo content-keys warn
   (opts-warn opts)
   (let [opts (merge opts {:resolve-spec resolve-spec})]
     (map->UIRoot
      (merge
       (view-multi-dispatch
-       {:dispatch-fn         ent->view-name
+       {:dispatch-fn         dispatch-fn
         :default-dispatch-fn default-view
         :invoke-fn           invoke-fn})
-      ;; fixme because resolver relies on ent->ref being :id
-      ;; this adds them as defaults add ent->ref
-      {:ent->ref     ent->ref
-       :ent->ref+ent (fn ent->ref+ent [ent] [(ent->ref ent) ent])}
+      {:->ref   ->ref
+       :->ref+x (fn ent->ref+ent [ent] [(->ref ent) ent])}
       (child-view-mappings opts)
       (when (nil? lookup-sub)
         {:lookup-sub lookup})

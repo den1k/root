@@ -16,11 +16,11 @@
 (reset! rc/state (u/project rc/ent->ref+ent data))
 
 (def root (rc/ui-root
-           {:ent->ref       rc/ent->ref
-            :lookup         rc/lookup
-            :ent->view-name :type
-            :transact       rc/transact
-            :add-id         rc/add-id}))
+           {:->ref       rc/ent->ref
+            :lookup      rc/lookup
+            :dispatch-fn :type
+            :transact    rc/transact
+            :add-id      rc/add-id}))
 
 (defmethod root :container
   [{:keys [views]}]
