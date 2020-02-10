@@ -10,7 +10,7 @@
                 :cljs cljs.spec.alpha) :as s]))
 
 (defonce id-gen (u/make-id-gen 1000))
-(defn add-id [ent] (assoc ent :id (id-gen)))
+(defn add-id [x] (assoc x :id (id-gen)))
 
 (def state xf/db)
 
@@ -281,6 +281,7 @@
           :transact (transact root b c)
           :lookup (with-meta (lookup b) {:root root})
           :view (add-view b c)
+          :render [rr/resolved-view root b]
           (dispatch-view a)))]))
 
 (defn- view-multi-dispatch [opts]
@@ -368,7 +369,7 @@
         :default-dispatch-fn default-view
         :invoke-fn           invoke-fn})
       {:->ref   ->ref
-       :->ref+x (fn ent->ref+ent [ent] [(->ref ent) ent])}
+       :->ref+x (fn ->ref+x [x] [(->ref x) x])}
       (child-view-mappings opts)
       (when (nil? lookup-sub)
         {:lookup-sub lookup})

@@ -1,6 +1,5 @@
 (ns nested.views
-  (:require [root.impl.resolver :as rr]
-            [xframe.core.alpha :as xf]
+  (:require [xframe.core.alpha :as xf]
             [den1k.shortcuts :refer [shortcuts global-shortcuts]]
             [uix.core.alpha :as uix]
             [uix.dom.alpha :as uix.dom]
@@ -54,23 +53,6 @@
     (vector? x) (xf/<sub [:get-in x])
     (map? x) x))
 
-(s/def ::nested-entity map?)
-(s/def ::nested-entities (s/coll-of ::nested-entity))
-(s/def ::entities-map
-  (s/map-of keyword?
-            (s/or :entity ::nested-entity
-                  :entities ::nested-entities)))
-
-(s/def ::content
-  (s/or :entity ::nested-entity
-        :entities ::nested-entities
-        :entities-map ::entities-map))
-
-;(s/def ::content ::nested-content)
-;(rr/get-keys-spec ::nested-entity)
-;(rr/filter-spec-keys-from-keys-spec ::content ::nested-entity)
-#_(rc/child-view-mappings {:entity-spec  ::nested-entity
-                           :resolve-spec ::content})
 (def root (rc/ui-root
            {:invoke-fn    (fn invoke [f x]
                             #_(js/console.log :op (:op x) x)
@@ -205,7 +187,7 @@
 (root :view :vector
   (fn [{:as ent :keys [items-ui]}]
     (let [[fui & items-ui'] items-ui]
-      [:span {:content-editable false}
+      [:span.flex.items-end {:content-editable false}
        [:div.outline-0.flex.flex-wrap.br1 ;.mv1
         (merge (ent->handlers ent)
                #_(ent->styles ent))
@@ -218,7 +200,6 @@
   (gfns/debounce #(ana-str @str-state
                            (fn [{:keys [value error]}]
                              (when value
-                               (js/console.log :SETTING)
                                (reset! rc/state value)
                                (xf/notify-listeners!))))
                  200))
@@ -240,7 +221,7 @@
      {:autoFocus                         true
       :content-editable                  true
       :suppress-content-editable-warning true}
-     [rr/nested-resolved-view root {:path []}]]]
+     [root :render {:path []}]]]
    (. js/document (getElementById "app"))))
 
 

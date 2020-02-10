@@ -1,6 +1,5 @@
 (ns rich-document.views
-  (:require [root.impl.resolver :as rr]
-            [den1k.shortcuts :refer [shortcuts global-shortcuts]]
+  (:require [den1k.shortcuts :refer [shortcuts global-shortcuts]]
             [util.dom :as ud]
             [util.string :as ustr]
             [uix.dom.alpha :as uix.dom]
@@ -32,12 +31,15 @@
                               [(ent->ref ent) ent])
                             mock-data/data))
 
-(xf/reg-sub :get
-  (fn [k]
-    (get (xf/<- [::xf/db]) k)))
+(defn lookup* [x]
+  (if (coll? x)
+    x
+    (get (xf/<- [::xf/db]) x)))
 
-(defn lookup [id]
-  (get (xf/<- [::xf/db]) id))
+(xf/reg-sub :get
+  (fn [k] (lookup* k)))
+
+(def lookup lookup*)
 
 (defn lookup-sub [id]
   (xf/<sub [:get id]))
@@ -178,13 +180,8 @@
 
 (defn example-root [id]
   (js/console.log :RUN)
-  [rr/resolved-view root {:root-id id}]
-  #_(doto
-     (rr/resolved-view root {:root-id id})
-      #_(rr/resolver-chain {:root    root
-                            :root-id id})
+  (root :render {:root-id id}))
 
-      #_js/console.log))
 (defn render-example []
   (uix.dom/render
    [example-root 1]
