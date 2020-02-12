@@ -185,5 +185,4 @@
 (defn render-example []
   (uix.dom/render
    [example-root 1]
-   ;[:h1 "hello"]
    (. js/document (getElementById "app"))))

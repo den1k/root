@@ -1,15 +1,19 @@
 (ns examples
   (:require
-   [rich-document.views :as rich-doc]
+   ;[rich-document.views :as rich-doc]
+   ;[minimal.views :as minimal]
+   [fetch.views :as fetch]
    ;[nested.views :as nested-views]
-            ;[debug.core :as debug-example]
-   #_[mixed-media.core :as mixed-media]))
+   ;[debug.core :as debug-example]
+   )
+  )
 
 
 (defn start []
-  ;(mixed-media/render-example)
   ;(debug-example/render-example)
-  (rich-doc/render-example)
+  ;(rich-doc/render-example)
+  ;(minimal/render-example)
+  (fetch/render-example)
   ;(nested.views/render-example)
   )
 

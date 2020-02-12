@@ -311,8 +311,11 @@
 (s/def ::transact ifn?)
 (s/def ::add-id ifn?)
 
+(s/def ::ui-root-data
+  (s/keys :req-un [::dispatch-fn ::content-spec ::content-keys]))
+
 (s/def ::ui-root-static
-  (s/keys :req-un [::dispatch-fn ::lookup ::content-spec ::content-keys]))
+  (s/and ::ui-root-data (s/keys :req-un [::lookup])))
 
 (s/def ::ui-root-reactive
   (s/and ::ui-root-static (s/keys :req-un [::lookup-sub])))
@@ -323,7 +326,8 @@
 (s/def ::ui-root
   (s/or :dynamic ::ui-root-dynamic
         :reactive ::ui-root-reactive
-        :static ::ui-root-static))
+        :static ::ui-root-static
+        :data ::ui-root-data))
 
 (defn opts-warn [root-opts]
   (let [[root-type _] (u/conform! ::ui-root root-opts)]

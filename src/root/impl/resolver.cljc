@@ -122,29 +122,35 @@
         actions (update :actions merge (wrap actions))
         handlers (assoc :handlers (wrap handlers))))))
 
+(defn- deref-state-hook [x]
+  (if (instance? uix.hooks.alpha/StateHook x)
+    (deref x)
+    x))
+
 (defn resolved-view
   ([{:as root :keys [root-id]}] (resolved-view root {:root-id root-id}))
   ([{:as root :keys [lookup-sub]} {:keys [root-id data parent-id path]}]
    ;#?(:cljs (js/console.log :resolving :root-id root-id :parent-id parent-id :path path))
-   (as-> (or data (lookup-sub (or root-id path))) x
-         (with-meta x {:root root})
-         #_((fn [x] #?(:cljs (js/console.log :resolve x)) x))
-         (cond-> x parent-id (assoc :parent-id parent-id))
-         (cond-> x path (assoc :path path))
-         (cond->> x
-           root-id (wrap-actions-and-handlers root)) ; todo wrap-actions for nested
-         (resolve-child-views
-          root
-          x
-          (fn [{:keys [k id-or-ent content-k]}]
-            [resolved-view
-             root
-             (if-not (coll? id-or-ent)
-                 ; graph
-                 {:root-id   id-or-ent
-                  :parent-id root-id
-                  :path      (into [root-id content-k] (u/ensure-vec k))}
-                 ; nested
-                 {:data id-or-ent
-                  :path (into (u/ensure-vec path) (remove nil?) [content-k k])})]))
-         (root x))))
+   (when-let [data (or data (lookup-sub (or root-id path)))]
+    (as-> data x
+          (deref-state-hook x)
+          (with-meta x {:root root})
+          (cond-> x parent-id (assoc :parent-id parent-id))
+          (cond-> x path (assoc :path path))
+          (cond->> x
+            root-id (wrap-actions-and-handlers root)) ; todo wrap-actions for nested
+          (resolve-child-views
+           root
+           x
+           (fn [{:keys [k id-or-ent content-k]}]
+             [resolved-view
+              root
+              (if-not (coll? id-or-ent)
+                ; graph
+                {:root-id   id-or-ent
+                 :parent-id root-id
+                 :path      (into [root-id content-k] (u/ensure-vec k))}
+                ; nested
+                {:data id-or-ent
+                 :path (into (u/ensure-vec path) (remove nil?) [content-k k])})]))
+          (root x)))))
