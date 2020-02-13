@@ -1,4 +1,4 @@
-(ns util.dom)
+(ns examples.util.dom)
 
 (extend-type js/HTMLCollection
   ISeqable

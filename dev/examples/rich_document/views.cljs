@@ -1,12 +1,12 @@
-(ns rich-document.views
+(ns examples.rich-document.views
   (:require [den1k.shortcuts :refer [shortcuts global-shortcuts]]
-            [util.dom :as ud]
-            [util.string :as ustr]
+            [examples.util.dom  :as ud]
+            [examples.util.string :as ustr]
             [uix.dom.alpha :as uix.dom]
             [root.impl.core :as rc]
             [root.impl.util :as u]
             [xframe.core.alpha :as xf]
-            [rich-document.mock-data :as mock-data]
+            [examples.rich-document.mock-data :as mock-data] 
             [uix.core.alpha :as uix]))
 
 (def entity-actions
@@ -178,11 +178,10 @@
                        false)})
       ent]]))
 
-(defn example-root [id]
-  (js/console.log :RUN)
-  (root :render {:root-id id}))
+(defn example-root []
+  [root :render {:root-id 1}])
 
 (defn render-example []
   (uix.dom/render
-   [example-root 1]
+   [example-root]
    (. js/document (getElementById "app"))))

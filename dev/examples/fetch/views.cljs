@@ -1,4 +1,4 @@
-(ns fetch.views
+(ns examples.fetch.views
   (:require [root.impl.core :as rc]
             [uix.dom.alpha :as uix.dom]
             [kitchen-async.promise :as p]

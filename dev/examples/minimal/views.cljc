@@ -1,4 +1,4 @@
-(ns minimal.views
+(ns examples.minimal.views
   (:require [root.impl.core :as rc]
             [uix.dom.alpha :as uix.dom]))
 
@@ -20,13 +20,15 @@
   (rc/ui-root
    {:lookup       lookup
     :dispatch-fn  :type
-    :transact     rc/transact
     :content-keys [:content]
     :content-spec integer?}))
 
 (root :view :profile-pic
   (fn [{:keys [src]}]
     [:img.br-100 {:src src}]))
+
+(defn example-root []
+  [root :render {:root-id 1}])
 
 (defn render-example []
   (uix.dom/render

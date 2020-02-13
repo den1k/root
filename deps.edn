@@ -11,16 +11,14 @@
  :aliases
  {:dev
   {:extra-deps  {mount {:mvn/version "0.1.16"}}
-   :extra-paths ["dev" "test" "examples"]}
+   :extra-paths ["dev" "test"]}
   :dev/cljs
   {:extra-deps
-   {thheller/shadow-cljs {:mvn/version "2.8.83"}
-    binaryage/devtools   {:mvn/version "0.9.11"}}}
-  :examples
-  {:extra-paths ["examples"]
-   :extra-deps
-   {den1k/shortcuts
-    {:git/url "https://github.com/den1k/shortcuts"
-     :sha     "871cc945bc5d6f6af4b1a46e5918c36e3d4f1949"}
+   {org.clojure/test.check {:mvn/version "0.10.0"}
+    thheller/shadow-cljs {:mvn/version "2.8.83"}
+    binaryage/devtools   {:mvn/version "0.9.11"}
+    den1k/shortcuts
+                         {:git/url "https://github.com/den1k/shortcuts"
+                          :sha     "871cc945bc5d6f6af4b1a46e5918c36e3d4f1949"}
     kitchen-async
-    {:mvn/version "0.1.0-SNAPSHOT"}}}}}
+                         {:mvn/version "0.1.0-SNAPSHOT"}}}}}

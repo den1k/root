@@ -19,11 +19,11 @@
 (defn resolve-content
   ([root content-k content] (resolve-content root content-k content identity))
   ([{:as root :keys [resolve-spec contents-hiccup-wrapper]} content-k content f]
-   (let [[type refs*] (u/conform! resolve-spec content)]
+   (let [[type] (u/conform! resolve-spec content)]
      (case type
        :content
        (with-meta (f {:content-k content-k
-                      :id-or-ent refs*}) {::type :entity})
+                      :id-or-ent content}) {::type :entity})
 
        :contents
        (with-meta (into contents-hiccup-wrapper
@@ -32,7 +32,7 @@
                            (f {:k         k
                                :content-k content-k
                                :id-or-ent ref})))
-                        refs*)
+                        content)
                   {::type :entities})
 
        :content-map

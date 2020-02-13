@@ -1,4 +1,4 @@
-(ns rich-document.mock-data)
+(ns examples.rich-document.mock-data)
 
 (def data
   [{:id 1 :type :container :content [103]}
