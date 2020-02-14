@@ -6,7 +6,7 @@
             [root.impl.core :as rc]
             [root.impl.util :as u]
             [xframe.core.alpha :as xf]
-            [examples.rich-document.mock-data :as mock-data] 
+            [examples.rich-document.mock-data :as mock-data]
             [uix.core.alpha :as uix]))
 
 (def entity-actions
@@ -180,8 +180,3 @@
 
 (defn example-root []
   [root :render {:root-id 1}])
-
-(defn render-example []
-  (uix.dom/render
-   [example-root]
-   (. js/document (getElementById "app"))))

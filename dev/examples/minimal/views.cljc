@@ -1,5 +1,6 @@
 (ns examples.minimal.views
   (:require [root.impl.core :as rc]
+            [examples.util.dom :as ud]
             [uix.dom.alpha :as uix.dom]))
 
 (def data
@@ -24,13 +25,29 @@
     :content-spec integer?}))
 
 (root :view :profile-pic
-  (fn [{:keys [src]}]
-    [:img.br-100 {:src src}]))
+      (fn [{:keys [src]}]
+        [:img.br-100 {:src src}]))
 
 (defn example-root []
-  [root :render {:root-id 1}])
-
-(defn render-example []
-  (uix.dom/render
-   [root :render {:root-id 1}]
-   (. js/document (getElementById "app"))))
+  [ud/example
+   {:title
+    "Minimal Example (with Default View)"
+    :details
+    [:<>
+     [:p
+      "This root only defines one view for " [:code.red ":profile-pic"]
+      ". However the root's " [:code.ph1.b--red.ba "default-view"] " assures
+      that the data is traversed and rendered properly in the absence of
+      defined views."]
+     [:p "For data lookups this example uses the following hash-map
+     as a graph:"]
+     [ud/pretty-code-block data]
+     [:p "The root config looks like this:"]
+     [ud/code-block
+      "{:lookup       lookup
+ :dispatch-fn  :type
+ :content-keys [:content]
+ :content-spec integer?}"]
+     [:p "where " [:code.red "lookup"] " is simply " [:code "#(get data %)"]]]
+    :root
+    [root :render {:root-id 1}]}])

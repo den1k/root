@@ -1,11 +1,9 @@
 (ns examples.spec-dispatch.views
   (:require [root.impl.core :as rc]
-            [uix.dom.alpha :as uix.dom]
             [clojure.spec.alpha :as s]
-            [clojure.spec.test.alpha :as st]
-            [clojure.test.check.generators :as gen]
+            [clojure.test.check.generators]
             [clojure.string :as str]
-            [root.impl.util :as u]))
+            [examples.util.dom :as ud]))
 
 (s/def ::email (s/with-gen (s/and string? #(str/includes? % "@"))
                            #(s/gen #{"foo@bar.com" "bar@baz.com"})))
@@ -80,18 +78,13 @@
                   :margin-height "0"
                   :margin-width  "0"}]]])))
 
-(defn code-block [str]
-  [:div.bg-light-gray.pa1.br2 [:code.pre.f6 str]])
-
-(defn pretty-code-block [x]
-  [code-block (u/pretty-str x)])
 
 (defn example-root []
-  [:div
-   [:div.pa3
-    [:h2 "Clojure Spec Based Data Generation and Dispatch"]
-    [:details
-     [:summary.outline-0 "Implementation Details"]
+  [ud/example
+   {:title
+    "Clojure Spec Based Data Generation and Dispatch"
+    :details
+    [:<>
      [:a.b.black {:href "https://github.com/den1k/root/blob/master/dev/examples/spec_dispatch/views.cljc"}
       [:div.mt2 "source"]]
      [:p
@@ -101,22 +94,23 @@
       spec in that it can have friends which are themselves users."]
      [:div
       [:h4.mb1 [:code.red "::user"] " spec"]
-      [pretty-code-block (s/form ::user)]]
+      [ud/pretty-code-block (s/form ::user)]]
      [:div
       [:h4.mb1 [:code.red "::address"] " spec"]
-      [pretty-code-block (s/form ::address)]]
+      [ud/pretty-code-block (s/form ::address)]]
      [:p
       "There's also a "
       [:code.red "::views"]
       " spec that is used in the dispatch function"]
      [:div
       [:h4.mb1 [:code.red "::views"] " spec"]
-      [pretty-code-block (s/form ::views)]
+      [ud/pretty-code-block (s/form ::views)]
       [:h4.mb1 [:code.red "root"] " config"]
-      [code-block
+      [ud/code-block
        "(def root
    (rc/ui-root
     {:dispatch-fn  #(first (s/conform ::views %)) ; <- spec dispatch
      :content-keys [:address :friends]
-     :content-spec ::views}))"]]]]
-   [root :render {:data data}]])
+     :content-spec ::views}))"]]
+     ]
+    :root [root :render {:data data}]}])

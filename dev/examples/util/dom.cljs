@@ -1,4 +1,5 @@
-(ns examples.util.dom)
+(ns examples.util.dom
+  (:require [root.impl.util :as u]))
 
 (extend-type js/HTMLCollection
   ISeqable
@@ -59,3 +60,23 @@
    (let [node      (or (.-lastElementChild node) node)
          txt-count (count (.-textContent node))]
      (set-cursor node txt-count opts))))
+
+(defn code-block [str]
+  [:div.bg-light-gray.pa1.br2 [:code.pre.f6 str]])
+
+(defn pretty-code-block [x]
+  [code-block (u/pretty-str x)])
+
+(defn example [{:keys [title details root]}]
+  [:<>
+   [:div.pv2.ph3
+    [:h2 title]
+    (when details
+      [:details
+       {:open true}
+      [:summary.outline-0.pointer "Implementation Details"]
+       [:div.pl3
+        details]])]
+   [:div.ph3
+    [:div.f3.pb2 "root:"]
+    [:div.pl3 root]]])

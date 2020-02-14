@@ -1,11 +1,7 @@
 (ns examples.nested.views
   (:require [xframe.core.alpha :as xf]
             [den1k.shortcuts :refer [shortcuts global-shortcuts]]
-            [uix.core.alpha :as uix]
-            [uix.dom.alpha :as uix.dom]
             [root.impl.core :as rc]
-            [clojure.spec.alpha :as s]
-            [clojure.string :as str]
             [cljs.js :as cljs]
             [cljs.analyzer :as ana]
             [goog.functions :as gfns]
@@ -196,11 +192,6 @@
      :content-editable                  true
      :suppress-content-editable-warning true}
     [root :render {:path []}]]])
-
-(defn render-example []
-  (uix.dom/render
-   [example-root]
-   (. js/document (getElementById "app"))))
 
 
 
