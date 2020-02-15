@@ -1,6 +1,6 @@
 (ns examples.rich-document.views
   (:require [den1k.shortcuts :refer [shortcuts global-shortcuts]]
-            [examples.util.dom  :as ud]
+            [examples.util.dom :as ud]
             [examples.util.string :as ustr]
             [uix.dom.alpha :as uix.dom]
             [root.impl.core :as rc]
@@ -17,19 +17,20 @@
    {:remove [[:remove [:<- :content]]]}
    :todo-item
    {:add            [[:add
-                      [:<- :content]
+                      [:<- :content :items]
                       {:type :todo-item :active? true :markup ["New Todo"]}]]
     :add-after      [[:add-after
                       {:type :todo-item :active? true :markup ["New Todo"]}]]
-    :remove         [[:remove [:<- :content]]]
+    :remove         [[:remove [:<- :content :items]]]
     :toggle-checked [[:toggle :checked?]]}})
 
 (defn ent->ref [ent]
   (:id ent))
 
-(reset! rc/state (u/project (fn [ent]
-                              [(ent->ref ent) ent])
-                            mock-data/data))
+(def projected-data
+  (u/project (fn [ent] [(ent->ref ent) ent]) mock-data/data))
+
+(reset! rc/state projected-data)
 
 (defn lookup* [x]
   (if (coll? x)
@@ -47,7 +48,7 @@
 (def root (rc/ui-root
            {:->ref          ent->ref
             :invoke-fn      (fn invoke [f x]
-                              (js/console.log :ent x)
+                              ;(js/console.log :ent x)
                               ^{:key (ent->ref x)}
                               [f x])
             :lookup         lookup
@@ -65,23 +66,61 @@
 
 (defn block
   [{:as              ent
-    :keys            [id]
+    :keys            [id show-block-thumb? show-block-menu? path]
     {:keys [remove]} :actions}
    & children]
-  (-> (into [:div.flex.items-center] children)
-      (conj
-       [:div.hide-child
-        [:div.flex.dim.light-silver.pointer.f7.child
+  (into [:div.flex.items-center
+         {:on-mouse-enter
+          (fn [e]
+            (root :transact
+              [[:set (assoc ent :show-block-thumb? true)]]
+              {:history? false}))
+          :on-mouse-leave
+          (fn [e]
+            (root :transact
+              [[:set (assoc ent :show-block-thumb? false
+                                :show-block-menu? false)]]
+              {:history? false}))}
          [:div
-          {:on-click remove}
-          "remove"]
-         (into
-          [:select
-           {:value     (name ((:dispatch-fn root) ent))
-            :on-change #(let [opt-kw (-> % .-target .-value keyword)]
-                          (root :transact [[:set (assoc ent :type opt-kw)]]))}]
-          (map (fn [x] [:option {:value x} x]))
-          ["todo-item" "toggle-list"])]])))
+          {:class (when-not show-block-thumb? "hide-child")}
+          [:div.light-silver.pointer.f7.mr1.relative
+           [:span.b.pa1.f6.br1.hover-bg-light-gray.child
+            {:on-click #(root :transact
+                          [[:set (assoc ent :show-block-menu? true)]]
+                          {:history? false})}
+            "::"]
+           (when show-block-menu?
+             (let [li-tag :li.pv2.ph3.b--light-silver.bb.hover-bg-light-gray]
+               [:ul.list.pl0.ml0.center.mw6.bg-white.shadow-2.br2.dark-gray.absolute.z-1
+                {:style {:top "-0.2rem"}}
+
+                [li-tag
+                 {:on-click remove}
+                 "remove"]
+                [li-tag
+                 "Turn into"
+                 (into
+                  [:select
+                   {:value     (name ((:dispatch-fn root) ent))
+                    :on-change #(let [opt-kw (-> % .-target .-value keyword)
+                                      ent    (assoc ent :type opt-kw
+                                                        :show-block-menu? false)
+                                      id     (+ 1000 (rand-int 10e4))]
+                                  (root
+                                    :transact
+                                    (case opt-kw
+                                      :todo-item
+                                      [[:set (dissoc ent :view :content)]]
+                                      :toggle-list
+                                      [[:add
+                                        [:<- :content :items]
+                                        {:id id :type :todo-item :active? true :markup ["empty"]}]
+                                       [:set (-> ent
+                                                 (assoc :open? true)
+                                                 (assoc-in [:content :items] [id]))]])))}]
+                  (map (fn [x] [:option {:value x} x]))
+                  ["todo-item" "toggle-list"])]]))]]]
+        children))
 
 (root :view :button
   (fn [{:as ent :keys [markup handlers]}]
@@ -114,24 +153,24 @@
 
 (root :view :toggle-list
   (fn [{:as ent :keys [id markup content-ui open?]}]
-    [block ent
-     (cond-> [:div
-              [:div.flex.items-center
-               [:div
-                {:style {:padding 5}}
-                [:div
-                 {:style    (merge
-                             {:font-size   12
-                              :line-height 1
-                              :user-select :none
-                              :cursor      :pointer}
-                             (when open?
-                               {:transform        "rotate(90deg)"
-                                :transform-origin :center}))
-                  :on-click #(root :transact [[:toggle :open? ent]])}
-                 "▶"]]
-               [input {} ent]]]
-       open? (conj content-ui))]))
+    (let [{:keys [items button]} content-ui]
+      [block ent
+       (cond-> [:div
+                [:div.flex.items-center.justify-between
+                 [:div.flex
+                  [:span.pointer.pl1.pv1
+                   {:style    (merge
+                               {:font-size   12
+                                :line-height 1
+                                :user-select :none}
+                               (when open?
+                                 {:transform        "rotate(90deg)"
+                                  :transform-origin :center}))
+                    :on-click #(root :transact [[:toggle :open? ent]])}
+                   "▶"]
+                  [input {} ent]]
+                 button]]
+         open? (conj items))])))
 
 (root :view :nav
   (fn [{:as ent :keys [content-ui routes]}]
@@ -179,4 +218,15 @@
       ent]]))
 
 (defn example-root []
-  [root :render {:root-id 1}])
+  [ud/example
+   {:title
+    "A Poor Person's Notion Clone in 200 LoC"
+    :details
+    [:<>
+     [:h3 "This example powers a rich document editor with:"]
+     [:ul
+      [:li "Routing (click " [:i "home"] " or " [:i "about"] ")"]
+      [:li "Undo/Redo through shortcuts or rendered buttons"]
+      [:li "Context menus (hover over the todos or toggle-lists)"]]]
+    :root
+    [root :render {:root-id 1}]}])

@@ -7,8 +7,12 @@
    {:id 102 :type :about :markup ["OTHER STUFF"]}
    {:id      2 :type :todo-list :view :toggle-list :markup ["Shopping List"]
     :open?   true
-    :content [6 3 4 5]}
+    :content {:button 6
+              :items [3 20 4 5]}}
+   {:id      20 :view :toggle-list :markup ["Sub-Shopping List"]
+    :content {:items [300]}}
    {:id 3 :type :todo-item :markup ["Buy Bananas \uD83C\uDF4C️"]}
+   {:id 300 :type :todo-item :markup ["Sub Task: Buy Bananas \uD83C\uDF4C️"]}
    {:id 4 :type :todo-item :markup ["Buy strawberries"]}
    {:id 5 :type :todo-item :checked? true :markup ["Buy Cabbage"]}
    {:id 6 :type :button :markup ["New Todo"] :handlers {:on-click [:todo-item :add]}}

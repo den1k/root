@@ -83,18 +83,24 @@
   [ud/example
    {:title
     "Clojure Spec Based Data Generation and Dispatch"
+    :source
+    "https://github.com/den1k/root/blob/master/dev/examples/spec_dispatch/views.cljc"
     :details
     [:<>
-     [:a.b.black {:href "https://github.com/den1k/root/blob/master/dev/examples/spec_dispatch/views.cljc"}
-      [:div.mt2 "source"]]
      [:p
-      "Specs for User and Address are defined. Note that "
+      "Specs for User and Address used for dispatch and data generation via
+      " [:code.red "(s/exercise ::user)"] "."
+      [:br]
+      "Note that "
       [:code.red "::user"]
-      " is a recursive
-      spec in that it can have friends which are themselves users."]
+      " is a recursive spec in that it can have "
+      [:code.red "::friends"]
+      " which are themselves users."]
      [:div
       [:h4.mb1 [:code.red "::user"] " spec"]
-      [ud/pretty-code-block (s/form ::user)]]
+      [ud/pretty-code-block (s/form ::user)]
+      [:h4.mb1 [:code.red "::friends"] " spec"]
+      [ud/pretty-code-block (s/form ::friends)]]
      [:div
       [:h4.mb1 [:code.red "::address"] " spec"]
       [ud/pretty-code-block (s/form ::address)]]

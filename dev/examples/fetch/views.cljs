@@ -57,10 +57,9 @@
     [ud/example
      {:title
       "Hackernews Reader"
+      :source "https://github.com/den1k/root/blob/master/dev/examples/fetch/views.cljs"
       :details
       [:<>
-       [:a.b.black {:href "https://github.com/den1k/root/blob/master/dev/examples/fetch/views.cljs"}
-        [:div.mt2 "source"]]
        [:p "This example fetches posts and details from Hackernews' API and passes
        the data to root to render."]]
       :root

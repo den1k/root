@@ -62,21 +62,23 @@
      (set-cursor node txt-count opts))))
 
 (defn code-block [str]
-  [:div.bg-light-gray.pa1.br2 [:code.pre.f6 str]])
+  [:div.bg-dark-gray.pa1.br2 [:code.pre.f6 str]])
 
 (defn pretty-code-block [x]
   [code-block (u/pretty-str x)])
 
-(defn example [{:keys [title details root]}]
+(defn example [{:keys [title source details root]}]
   [:<>
-   [:div.pv2.ph3
-    [:h2 title]
+   [:div.pv2.ph3.bg-near-black.white
+    [:div.flex.justify-between
+     [:h2.fw2 title]
+     (when source
+       [:a.white.link {:href source}
+        [:div.pa2.tracked.f6 "SOURCE"]])]
     (when details
       [:details
        {:open true}
       [:summary.outline-0.pointer "Implementation Details"]
        [:div.pl3
         details]])]
-   [:div.ph3
-    [:div.f3.pb2 "root:"]
-    [:div.pl3 root]]])
+   [:div.pa3 root]])
