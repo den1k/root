@@ -48,6 +48,6 @@
   using the same type as the first data-structure"
   [& [x :as xs]]
   (cond
-    (or (sequential? x) (set? x)) (into (empty x) cat xs)
+    (or (sequential? x) (set? x)) (into (empty x) cat (reverse xs))
     (map? x) (apply merge-with deep-merge xs)))
 

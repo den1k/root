@@ -40,7 +40,8 @@
                 :zip     10011
                 :state   "NY"
                 :country "United States"
-                :open?   true}})
+                :open?   true}
+   :open?      true})
 
 (def root
   (rc/ui-root
@@ -49,13 +50,14 @@
     :content-spec ::views}))
 
 (root :view :user
-  (fn [{:keys [first-name last-name email friends-ui address-ui]}]
+  (fn [{:keys [first-name last-name email friends-ui address-ui open?]}]
     [:div.pa1.ma3.bg-black-05.br2
      [:h1 first-name " " last-name]
      [:a.link {:href (str "mailto:" email)} email]
      address-ui
      (when friends-ui
        [:details
+        {:open open?}
         [:summary "Show friends"]
         friends-ui])]))
 
@@ -79,7 +81,7 @@
                   :margin-width  "0"}]]])))
 
 
-(defn example-root []
+(defn ^:export example-root []
   [ud/example
    {:title
     "Clojure Spec Based Data Generation and Dispatch"
@@ -114,9 +116,10 @@
       [:h4.mb1 [:code.red "root"] " config"]
       [ud/code-block
        "(def root
-   (rc/ui-root
-    {:dispatch-fn  #(first (s/conform ::views %)) ; <- spec dispatch
-     :content-keys [:address :friends]
-     :content-spec ::views}))"]]
+ (rc/ui-root
+   {:dispatch-fn  #(first (s/conform ::views %)) ; <- spec dispatch
+    :content-keys [:address :friends]
+    :content-spec ::views}))"]]
      ]
-    :root [root :render {:data data}]}])
+    :root
+    [root :render {:data data}]}])

@@ -364,8 +364,8 @@
   (opts-warn opts)
   (let [opts (merge
               default-opts
-              opts
-              {:resolve-spec (rr/->resolver-spec content-spec)})]
+              {:resolve-spec (rr/->resolver-spec content-spec)}
+              opts)]
     (map->UIRoot
      (merge
       (view-multi-dispatch

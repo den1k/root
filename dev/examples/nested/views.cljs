@@ -2,6 +2,7 @@
   (:require [xframe.core.alpha :as xf]
             [den1k.shortcuts :refer [shortcuts global-shortcuts]]
             [root.impl.core :as rc]
+            [clojure.spec.alpha :as s]
             [cljs.js :as cljs]
             [cljs.analyzer :as ana]
             [goog.functions :as gfns]
@@ -183,7 +184,7 @@
                        (reset! str-state text)
                        (debounce-set-ana-str)))}])
 
-(defn example-root []
+(defn ^:export example-root []
   (xf/notify-listeners!)
   [:div.flex
    [paste-code-box]

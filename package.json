@@ -1,8 +1,9 @@
 {
   "scripts": {
     "deps": "yarn install",
-    "watch": "shadow-cljs -A:dev:cljs:dev/cljs watch app;",
-    "release": "shadow-cljs release app;",
+    "watch": "shadow-cljs -A:dev:dev/cljs watch app;",
+    "release": "shadow-cljs -A:dev/cljs release app;",
+    "release-examples": "shadow-cljs -A:dev/cljs release examples;",
     "server": "shadow-cljs server;",
     "clean": "rm -rf target; rm -rf public/js/compiled"
   },

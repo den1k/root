@@ -1,9 +1,6 @@
 (ns examples.fetch.views
   (:require [root.impl.core :as rc]
-            [uix.dom.alpha :as uix.dom]
             [kitchen-async.promise :as p]
-            [xframe.core.alpha :as xf]
-            [root.impl.util :as u]
             [examples.util.dom :as ud]))
 
 (defn fetch-json [str]
@@ -44,27 +41,33 @@
              "job"]]
            [:span.f6.gray score " points"]])))
 
-(defn render-example []
+(def data-promise
   (p/let
    [pdata (fetch-json "https://hacker-news.firebaseio.com/v0/topstories.json")
     top-50 (take 50 pdata)
     items (p/all
            (mapv
             (comp fetch-json
-                  #(str "https://hacker-news.firebaseio.com/v0/item/" % ".json"))
+                  (fn [post-id]
+                    (str "https://hacker-news.firebaseio.com/v0/item/" post-id ".json")))
             top-50))]
-   (uix.dom/render
-    [ud/example
-     {:title
-      "Hackernews Reader"
-      :source "https://github.com/den1k/root/blob/master/dev/examples/fetch/views.cljs"
-      :details
-      [:<>
-       [:p "This example fetches posts and details from Hackernews' API and passes
-       the data to root to render."]]
-      :root
-      [root :render
-       {:data {:type    :ordered-list
-               :title   (str "Top " (count items) " Posts")
-               :content (vec items)}}]}]
-    (. js/document (getElementById "app")))))
+   {:type    :ordered-list
+    :title   (str "Top " (count items) " Posts")
+    :content (vec items)}))
+
+(defn ^:export example-root []
+  [ud/example
+   {:title
+    "Hackernews Reader (implicit promise resolve)"
+    :source
+    "https://github.com/den1k/root/blob/master/dev/examples/fetch/views.cljs"
+    :open-details?
+    true
+    :details
+    [:<>
+     [:p "This root is passed a promise that pulls hackernews data under the
+        " [:code.red ":data"] " key.
+        The promise is implicitly resolved by root's resolver and passed
+        to root to render."]]
+    :root
+    [root :render {:data data-promise}]}])

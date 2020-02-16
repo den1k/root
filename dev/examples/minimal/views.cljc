@@ -1,7 +1,6 @@
 (ns examples.minimal.views
   (:require [root.impl.core :as rc]
-            [examples.util.dom :as ud]
-            [uix.dom.alpha :as uix.dom]))
+            [examples.util.dom :as ud]))
 
 (def data
   {1 {:type       :user
@@ -25,13 +24,17 @@
     :content-spec integer?}))
 
 (root :view :profile-pic
-      (fn [{:keys [src]}]
-        [:img.br-100 {:src src}]))
+  (fn [{:keys [src]}]
+    [:img.br-100 {:src src}]))
 
-(defn example-root []
+(defn ^:export example-root []
   [ud/example
    {:title
     "Minimal Example (with Default View)"
+    :source
+    "https://github.com/den1k/root/blob/master/dev/examples/minimal/views.cljc"
+    :open-details?
+    true
     :details
     [:<>
      [:p

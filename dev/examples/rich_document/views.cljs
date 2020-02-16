@@ -221,12 +221,18 @@
   [ud/example
    {:title
     "A Poor Person's Notion Clone in 200 LoC"
+    :source
+    "https://github.com/den1k/root/blob/master/dev/examples/rich_document/views.cljs"
+    :open-details?
+    true
     :details
     [:<>
      [:h3 "This example powers a rich document editor with:"]
      [:ul
       [:li "Routing (click " [:i "home"] " or " [:i "about"] ")"]
       [:li "Undo/Redo through shortcuts or rendered buttons"]
-      [:li "Context menus (hover over the todos or toggle-lists)"]]]
+      [:li "Context menus (hover over the todos or toggle-lists)"]]
+     [:h3 "The initial app state looks like this"]
+     [ud/pretty-code-block 120 projected-data]]
     :root
     [root :render {:root-id 1}]}])

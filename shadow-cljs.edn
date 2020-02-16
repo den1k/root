@@ -1,26 +1,32 @@
 ;; shadow-cljs configuration
-{:deps  {:aliases [:dev :cljs :dev/cljs]}
- :http  {:port 1234}
+{:deps   {:aliases [:dev :cljs :dev/cljs]}
+ :http   {:port 1234}
 
  ;; set an nrepl port for connection to a REPL.
- :nrepl {:port 8888}
+ :nrepl  {:port 8888}
 
- :builds
-        {:app {:target     :browser
-               :output-dir "public/js/compiled"
-               :asset-path "/js/compiled"
+ :builds {:app
+          {:target     :browser
+           :output-dir "public/js/compiled"
+           :asset-path "/js/compiled"
 
-               :modules
-                           {:main
-                            {:entries [examples.core]}}
+           :modules    {:main
+                        {:entries [examples.core]}}
 
-               :devtools
-               ;; before live-reloading any code call this function
-                           {:before-load examples.core/stop
-                            ;; after live-reloading finishes call this function
-                            :after-load  examples.core/start
-                            ;; serve the public directory over http at port 8700
-                            :http-root   "public"
-                            :http-port   8700
-                            :preloads    [devtools.preload]}
-               }}}
+           :devtools
+           ;; before live-reloading any code call this function
+                       {:before-load examples.core/stop
+                        ;; after live-reloading finishes call this function
+                        :after-load  examples.core/start
+                        ;; serve the public directory over http at port 8700
+                        :http-root   "public"
+                        :http-port   8700
+                        :preloads    [devtools.preload]}
+           }
+          :examples
+          {:target           :browser
+           :output-dir       "docs/js/compiled"
+           :asset-path       "/js/compiled"
+
+           :modules          {:main
+                              {:entries [examples.docs]}}}}}
