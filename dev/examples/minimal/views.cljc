@@ -53,4 +53,4 @@
  :content-spec integer?}"]
      [:p "where " [:code.red "lookup"] " is simply " [:code "#(get data %)"]]]
     :root
-    [root :render {:root-id 1}]}])
+    [root :resolve {:root-id 1}]}])

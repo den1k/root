@@ -192,7 +192,7 @@
     {:autoFocus                         true
      :content-editable                  true
      :suppress-content-editable-warning true}
-    [root :render {:path []}]]])
+    [root :resolve {:path []}]]])
 
 
 

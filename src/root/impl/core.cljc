@@ -281,7 +281,7 @@
           :transact (transact root b c)
           :lookup (with-meta (lookup b) {:root root})
           :view (add-view b c)
-          :render [rr/resolved-view root b]
+          :resolve [rr/resolved-view root b]
           (dispatch-view a)))]))
 
 (defn- view-multi-dispatch [opts]

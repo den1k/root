@@ -145,9 +145,9 @@
   ([{:as root :keys [root-id]}] (resolved-view root {:root-id root-id}))
   ([{:as root :keys [lookup-sub]} {:keys [root-id data parent-id path]}]
    ;#?(:cljs (js/console.log :resolving :root-id root-id :parent-id parent-id :path path))
-   (when-let [data (-> (or data (lookup-sub (or root-id path)))
-                       js-promise-hook
-                       deref-state-hook)]
+   (when-let [data (some-> (or data (lookup-sub (or root-id path)))
+                           js-promise-hook
+                           deref-state-hook)]
      (as-> data x
            (with-meta x {:root root})
            (cond-> x parent-id (assoc :parent-id parent-id))

@@ -235,4 +235,4 @@
      [:h3 "The initial app state looks like this"]
      [ud/pretty-code-block 120 projected-data]]
     :root
-    [root :render {:root-id 1}]}])
+    [root :resolve {:root-id 1}]}])

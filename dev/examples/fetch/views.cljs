@@ -83,6 +83,6 @@
          :promise '<data-promise>}]]
       [:span.f6.silver "(if you don't see it try throttling your network in devtools)"]]]
     :root
-    [root :render {:data {:loading {:type   :loading
-                                    :markup "Your favorite posts"}
-                          :promise data-promise}}]}])
+    [root :resolve {:data {:loading {:type   :loading
+                                     :markup "Your favorite posts"}
+                           :promise data-promise}}]}])

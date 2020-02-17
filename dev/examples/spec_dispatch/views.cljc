@@ -122,4 +122,4 @@
     :content-spec ::views}))"]]
      ]
     :root
-    [root :render {:data data}]}])
+    [root :resolve {:data data}]}])
