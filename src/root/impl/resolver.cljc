@@ -133,12 +133,13 @@
 (defn js-promise? [p]
   (boolean (.-then p)))
 
-(defn- js-promise-hook [x]
-  (if (and #?(:clj false) (js-promise? x))
-    (let [st (uix/state nil)]
-      (p/then x (fn [x] (reset! st x)))
-      st)
-    x))
+(defn- js-promise-hook [{:as x :keys [loading promise]}]
+  (let [x (or promise x)]
+    (if (and #?(:clj false) (js-promise? x))
+      (let [st (uix/state loading)]
+        (p/then x (fn [x] (reset! st x)))
+        st)
+      x)))
 
 (defn resolved-view
   ([{:as root :keys [root-id]}] (resolved-view root {:root-id root-id}))

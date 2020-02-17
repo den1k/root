@@ -14,32 +14,38 @@
     :content-keys [:content]
     :content-spec (fn [x] (get x :id))}))
 
+(root :view :loading
+  (fn [{:keys [markup]}]
+    [:<>
+     [:h1 "Loading..."]
+     [:span markup]]))
+
 (root :view :ordered-list
-      (fn [{:keys [content content-ui title]}]
-        [:div
-         [:h2.pl2 title]
-         [:ol content-ui]]))
+  (fn [{:keys [content content-ui title]}]
+    [:div
+     [:h2.pl2 title]
+     [:ol content-ui]]))
 
 (root :view "story"
-      (fn [{:keys [title by url score]}]
-        [:li.pa1.hover-bg-light-gray
-         [:div [:div.dib [:a.link {:href url} [:span title]]] [:span (str " - " by)]]
-         [:span.f6.gray score " points"]]))
+  (fn [{:keys [title by url score]}]
+    [:li.pa1.hover-bg-light-gray
+     [:div [:div.dib [:a.link {:href url} [:span title]]] [:span (str " - " by)]]
+     [:span.f6.gray score " points"]]))
 
 (root :view "job"
-      (fn [{:keys [title by score text]}]
-        (let [title-hic [:div.dib title " - " by]]
-          [:li.pa1.bg-light-yellow
-           [:div.flex.items-center
-            (if-not text
-              title-hic
-              [:details
-               [:summary.outline-0 title-hic]
-               [:div.ph3.pt2 {:dangerouslySetInnerHTML {:__html text}}]])
-            [:span.ph2.pv1.ml2.code.self-center.bg-light-gray.ba.br2
-             {:style {:font-size "0.7rem"}}
-             "job"]]
-           [:span.f6.gray score " points"]])))
+  (fn [{:keys [title by score text]}]
+    (let [title-hic [:div.dib title " - " by]]
+      [:li.pa1.bg-light-yellow
+       [:div.flex.items-center
+        (if-not text
+          title-hic
+          [:details
+           [:summary.outline-0 title-hic]
+           [:div.ph3.pt2 {:dangerouslySetInnerHTML {:__html text}}]])
+        [:span.ph2.pv1.ml2.code.self-center.bg-light-gray.ba.br2
+         {:style {:font-size "0.7rem"}}
+         "job"]]
+       [:span.f6.gray score " points"]])))
 
 (def data-promise
   (p/let
@@ -68,6 +74,15 @@
      [:p "This root is passed a promise that pulls hackernews data under the
         " [:code.red ":data"] " key.
         The promise is implicitly resolved by root's resolver and passed
-        to root to render."]]
+        to root to render."]
+     [:div "The root is also passed a loading state"
+      [:div.pv1
+       [ud/pretty-code-block
+        {:loading {:type   :loading
+                   :markup "Your favorite posts"}
+         :promise '<data-promise>}]]
+      [:span.f6.silver "(if you don't see it try throttling your network in devtools)"]]]
     :root
-    [root :render {:data data-promise}]}])
+    [root :render {:data {:loading {:type   :loading
+                                    :markup "Your favorite posts"}
+                          :promise data-promise}}]}])

@@ -2,8 +2,8 @@
   (:require
    [uix.dom.alpha :as uix.dom]
    ;[examples.rich-document.views :refer [example-root]]
-   [examples.minimal.views :refer [example-root]]
-   ;[examples.fetch.views :as fetch]
+   ;[examples.minimal.views :refer [example-root]]
+   [examples.fetch.views :refer [example-root]]
    ;[examples.nested.views :refer [example-root]]
    ;[examples.spec-dispatch.views :refer [example-root]]
    ))
