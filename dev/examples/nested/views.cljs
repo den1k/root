@@ -44,14 +44,14 @@
     (vector? x) (xf/<sub [:get-in x])
     (map? x) x))
 
-(def root (rc/ui-root
-           {:lookup                  lookup
-            :lookup-sub              lookup-sub
-            :content-keys            [:fn :args :items :vals :keys :statements :ret :test :then :else]
-            :content-spec            (s/and map? (fn [x] (:op x)))
-            :resolve-spec            ::content
-            :contents-hiccup-wrapper []
-            :dispatch-fn             :op}))
+(def root
+  (rc/ui-root
+   {:dispatch-fn             :op
+    :lookup                  lookup
+    :lookup-sub              lookup-sub
+    :content-keys            [:fn :args :items :vals :keys :statements :ret :test :then :else]
+    :content-spec            (s/and map? (fn [x] (:op x)))
+    :contents-hiccup-wrapper []}))
 
 (defn ana-ent->css-classes [{:as ent :keys [op tag form]}]
   (cond
