@@ -54,8 +54,8 @@
                     (remove (fn [tx] (contains? diff (op-dispatch tx))) txs)))]
     (some->> txs (mapv inverted-op) not-empty)))
 
-(defn log-txs [ctxs]
-  (let [[[op] :as txs] (s/unform ::txs ctxs)]
+(defn log-txs [txs]
+  (let [[[op]] txs]
     (case op
       (:undo :redo) nil
       (let [{:keys [log]} @history-log]
@@ -187,7 +187,7 @@
   ([root txs {:keys [history?]}]
    (let [conformed-txs (u/conform! ::txs (filter identity txs))]
      (when history?
-       (log-txs conformed-txs))
+       (log-txs txs))
      (doseq [ctx conformed-txs
              :let [ctx (update ctx :ent dissoc :actions :handlers :views)]]
        (run-tx root ctx)))

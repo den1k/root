@@ -91,8 +91,8 @@
         :path ::txs-path))
 
 (defn wrap-actions-and-handlers
-  [{:as root :keys [transact entity-actions add-id ->ref]}
-   {:as orig-ent :keys [type actions handlers parent-id]}]
+  [{:as root :keys [dispatch-fn transact entity-actions add-id ->ref]}
+   {:as orig-ent :keys [actions handlers parent-id]}]
   (letfn [(resolve-txs [conformed txs-or-txs-path]
             (case (first conformed)
               :partial-txs txs-or-txs-path
@@ -117,7 +117,8 @@
                         form-txs
                         (transact root)))))
              actions-map))]
-    (let [ent-actions (get entity-actions type)]
+    (let [dispatch-val (dispatch-fn orig-ent)
+          ent-actions  (get entity-actions dispatch-val)]
       (cond-> orig-ent
         ent-actions (assoc :actions (wrap ent-actions))
         actions (update :actions merge (wrap actions))
