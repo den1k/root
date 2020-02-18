@@ -223,22 +223,24 @@
     :source
     "https://github.com/den1k/root/blob/master/dev/examples/rich_document/views.cljs"
     :open-details?
-    false
+    true
     :details
     [:<>
-     [:h3 "This example takes baby steps towards a rich document editor with
-     current support for:"]
+     [:h3 "Baby Steps toward a Rich Document Editor"]
+     [:b "Current Feature Set:"]
      [:ul
       [:li "Routing (click " [:i "home"] " or " [:i "about"] ")"]
       [:li "Undo/Redo through shortcuts or rendered buttons"]
-      [:li "Context menus (hover over the todos or toggle-lists)"]]
+      [:li "Context menus (hover over the todos or toggle-lists)"]
+      [:li "Change " [:i.b "block"] " type (through context menu)"]
+      [:li "Arbitrarily deep nesting of views (make toggle-lists inside toggle-lists)"]]
      [:hr]
-     [:details
-      {:open true}
-      [:summary "From the initial app-state"]
+     [:details.pb1
+      {:open false}
+      [:summary.outline-0.pointer "initial app-state"]
       [:div.pv1
        [ud/pretty-code-block 120 projected-data]]]
-     [:div "root recurses through " [:code.red ":content"]
+     [:div "From the initial app-state root recurses through " [:code.red ":content"]
       " keys, looks up the data, resolves components and renders the following UI:"]]
     :root
     [root :resolve {:root-id 1}]}])
