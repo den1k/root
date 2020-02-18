@@ -52,7 +52,7 @@ width="300px"/>
 This is the `default-view` in root. It always tries to render all
 keys and values on a given data node.
 
-root acts like `multimethod`. New UI components can be added like so:
+root acts like `multimethod`. New UI components can be added like this:
 
 ```clojure
 (root :view :profile-pic
