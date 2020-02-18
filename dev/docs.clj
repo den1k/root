@@ -72,7 +72,7 @@
  (let [files (files->index-html-file-names+content (views-files))
        ;; fixme remove this once multiple DB's are supported
        files (remove (fn [[file-name]]
-                       (re-find #"rich-document|nested" file-name))
+                       (re-find #"nested" file-name))
                      files)]
    (doseq [[fl-name content] files]
      (spit (str docs-dir "/" fl-name) content)))

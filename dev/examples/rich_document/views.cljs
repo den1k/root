@@ -176,7 +176,6 @@
   (fn [{:as ent :keys [content-ui routes]}]
     [:div
      [:nav.db.dt-l.w-100.border-box.pa3.ph5-l
-      (subs (str (.getTime (js/Date.))) 9)
       (into
        [:div.db.dtc-l.v-mid.w-100.w-75-l.tc.tr-l]
        (map
@@ -217,22 +216,29 @@
                        false)})
       ent]]))
 
-(defn example-root []
+(defn ^:export example-root []
   [ud/example
    {:title
     "A Poor Person's Notion Clone in 200 LoC"
     :source
     "https://github.com/den1k/root/blob/master/dev/examples/rich_document/views.cljs"
     :open-details?
-    true
+    false
     :details
     [:<>
-     [:h3 "This example powers a rich document editor with:"]
+     [:h3 "This example takes baby steps towards a rich document editor with
+     current support for:"]
      [:ul
       [:li "Routing (click " [:i "home"] " or " [:i "about"] ")"]
       [:li "Undo/Redo through shortcuts or rendered buttons"]
       [:li "Context menus (hover over the todos or toggle-lists)"]]
-     [:h3 "The initial app state looks like this"]
-     [ud/pretty-code-block 120 projected-data]]
+     [:hr]
+     [:details
+      {:open true}
+      [:summary "From the initial app-state"]
+      [:div.pv1
+       [ud/pretty-code-block 120 projected-data]]]
+     [:div "root recurses through " [:code.red ":content"]
+      " keys, looks up the data, resolves components and renders the following UI:"]]
     :root
     [root :resolve {:root-id 1}]}])
