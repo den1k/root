@@ -10,7 +10,8 @@ No, root is agnostic to your state and state management. It cares only for a `lo
 
 **What is developing a root like?**
 
-root is data first, meaning that without component props it renders nothing. Once you have the data it let's you develop incrementally, meaning that it renders a UI even when UI components are not defined for that given piece of data.
+root is data first. It recurses through your data resolving UI components along the way.
+ With data in place, it let's you develop incrementally, even for data you haven't defined components for yet. 
 
 ## live examples
 
@@ -22,6 +23,9 @@ root is data first, meaning that without component props it renders nothing. Onc
 
 Here's what a minimal root looks like:
 ```clojure
+(ns my-ns
+  (:require [root.impl.core :as rc]))
+
 (def root
   (rc/ui-root
    {:lookup       (fn [k] (get data k))
@@ -39,13 +43,14 @@ With data:
       :last-name  "Luator"}})
 ```
 
-rendering `[root :resolve {:root-id 1}]` results in
+Note that we haven't defined any UI componenets.
+Yet, rendering `[root :resolve {:root-id 1}]` results in
 
 <img src="https://github.com/den1k/root/blob/master/docs/img/resolve-1.png?raw=true"
 width="300px"/>
 
-The red border marks the `default-view` in root. It always tries to render all
-keys and values on the node.
+This is the `default-view` in root. It always tries to render all
+keys and values on a given data node.
 
 root acts like `multimethod`. New UI components can be added like so:
 
@@ -55,7 +60,7 @@ root acts like `multimethod`. New UI components can be added like so:
     [:img.br-100 {:src src}]))
 ```
 
-`:profile-pic` is the `dispatch-value` the function is the UI component definition in hiccup.
+`:profile-pic` is the `dispatch-value`, the function is the UI component definition in hiccup.
 
 If we now define `data` to be
 ```clojure

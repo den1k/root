@@ -6,8 +6,12 @@
   medley                    {:mvn/version "1.2.0"}
   expound                   {:mvn/version "0.8.4"}
 
-  uix.core {:local/root "../../clojure/uix/core"}
-  uix.dom {:local/root "../../clojure/uix/dom"}}
+  uix.core                  {:git/url   "https://github.com/roman01la/uix.git"
+                             :deps/root "core"
+                             :sha       "d487a4cbddb08a31843d433cc4fb4ff2994596bf"}
+  uix.dom                   {:git/url   "https://github.com/roman01la/uix.git"
+                             :deps/root "dom"
+                             :sha       "d487a4cbddb08a31843d433cc4fb4ff2994596bf"}}
  :aliases
  {:dev
   {:extra-deps  {mount {:mvn/version "0.1.16"}}
@@ -15,10 +19,8 @@
   :dev/cljs
   {:extra-deps
    {org.clojure/test.check {:mvn/version "0.10.0"}
-    thheller/shadow-cljs {:mvn/version "2.8.83"}
-    binaryage/devtools   {:mvn/version "0.9.11"}
-    den1k/shortcuts
-                         {:git/url "https://github.com/den1k/shortcuts"
-                          :sha     "871cc945bc5d6f6af4b1a46e5918c36e3d4f1949"}
-    kitchen-async
-                         {:mvn/version "0.1.0-SNAPSHOT"}}}}}
+    thheller/shadow-cljs   {:mvn/version "2.8.83"}
+    binaryage/devtools     {:mvn/version "0.9.11"}
+    den1k/shortcuts        {:git/url "https://github.com/den1k/shortcuts"
+                            :sha     "871cc945bc5d6f6af4b1a46e5918c36e3d4f1949"}
+    kitchen-async          {:mvn/version "0.1.0-SNAPSHOT"}}}}}

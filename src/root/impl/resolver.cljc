@@ -3,8 +3,7 @@
             [root.impl.entity :as ent]
             [medley.core :as md]
             [clojure.spec.alpha :as s]
-            [uix.core.alpha :as uix]
-            [kitchen-async.promise :as p])
+            [uix.core.alpha :as uix])
   #?(:clj (:import clojure.lang.Cons)))
 
 (defn ->resolver-spec [content-spec]
@@ -137,7 +136,7 @@
   (let [x (or promise x)]
     (if (and #?(:clj false) (js-promise? x))
       (let [st (uix/state loading)]
-        (p/then x (fn [x] (reset! st x)))
+        (.then x (fn [x] (reset! st x)))
         st)
       x)))
 
