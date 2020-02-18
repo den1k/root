@@ -111,6 +111,10 @@ the full code and [live example](https://den1k.github.io/root/minimal.html). I r
     - xframe (re-frame like event handling+subscription sub-lib) is overkill. Reagent ratom + cursor like abstraction would do.
 </details>
 
+## Status
+
+This software is so **alpha** you don't even...
+
 ## License
 
 Copyright © 2020 Dennis Heihoff
