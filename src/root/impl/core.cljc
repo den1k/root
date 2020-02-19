@@ -353,8 +353,10 @@
      :content-ui-keys     content-ui-keys
      :content-key->ui-key content-key->ui-key}))
 
-(def ^:private default-opts {:content-post-fix        "-ui"
-                             :contents-hiccup-wrapper [:<>]})
+(def ^:private default-opts
+  {:content-post-fix        "-ui"
+   ;; in uix/reagent this is interpreted as a react fragment
+   :contents-hiccup-wrapper [:<>]})
 
 (defn ui-root
   [{:as   opts

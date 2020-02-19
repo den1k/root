@@ -22,7 +22,19 @@ root is data first. It recurses through your data resolving UI components along 
 
 ## code example
 
-Here's what a minimal root looks like:
+Root is data-first. Without data it doesn't render.
+So let's define `data` to be:
+
+```clojure
+(def data
+  {1 {:type       :user
+      :first-name "Eva"
+      :last-name  "Luator"}})
+```
+
+And a minimal root with a `:lookup` into data and a `:dispatch-fn` on the `:type`
+key of each data-node:
+
 ```clojure
 (ns my-ns
   (:require [root.impl.core :as rc]))
@@ -35,25 +47,16 @@ Here's what a minimal root looks like:
     :content-spec integer?}))
 ```
 
-With data:
-
-```clojure
-(def data
-  {1 {:type       :user
-      :first-name "Eva"
-      :last-name  "Luator"}})
-```
-
-Note that we haven't defined any UI componenets.
-Yet, rendering `[root :resolve {:root-id 1}]` results in
+Rendering `[root :resolve {:root-id 1}]` results in
 
 <img src="https://github.com/den1k/root/blob/master/docs/img/resolve-1.png?raw=true"
 width="300px"/>
 
+Note that even though we haven't defined any UI componenets, root renders a UI.
 This is the `default-view` in root. It always tries to render all
 keys and values on a given data node.
 
-root acts like `multimethod`. New UI components can be added like this:
+root acts like `multimethod`. Add new components like this:
 
 ```clojure
 (root :view :profile-pic
