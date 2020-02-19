@@ -11,7 +11,7 @@ No, root is agnostic to your state and state management. It cares only for a `lo
 **What is developing a root like?**
 
 root is data first. It recurses through your data resolving UI components along the way.
- With data in place, it let's you develop incrementally, even for data you haven't defined components for yet. 
+ With data in place, it lets you develop incrementally, even for data you haven't defined components for yet. 
 
 ## live examples
 
