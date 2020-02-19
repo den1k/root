@@ -56,8 +56,8 @@
          content)
         {::type :entity-map})))))
 
-(defn resolve-child-views
-  ([root ent] (resolve-child-views root ent identity))
+(defn resolve-child-content
+  ([root ent] (resolve-child-content root ent identity))
   ([{:as root :keys [content-keys content-key->ui-key]} ent f]
    (reduce
     (fn [out chk]
@@ -154,7 +154,7 @@
            (cond-> x path (assoc :path path))
            (cond->> x
              root-id (wrap-actions-and-handlers root)) ; todo wrap-actions for nested
-           (resolve-child-views
+           (resolve-child-content
             root
             x
             (fn [{:keys [k id-or-ent content-k]}]
@@ -169,3 +169,66 @@
                  {:data id-or-ent
                   :path (into (u/ensure-vec path) (remove nil?) [content-k k])})]))
            (root x)))))
+
+(defn resolved-data
+  ([{:as root :keys [root-id]}] (resolved-data root {:root-id root-id}))
+  ([{:as root :keys [lookup]} {:keys [root-id data parent-id path]}]
+   (when-let [data (or data (lookup (or root-id path)))]
+     (as-> data x
+           (with-meta x {:root root})
+           (cond-> x parent-id (assoc :parent-id parent-id))
+           (cond-> x path (assoc :path path))
+           (resolve-child-content
+            root
+            x
+            (fn [{:keys [k id-or-ent content-k]}]
+              (resolved-data
+               root
+               (if-not (coll? id-or-ent)
+                 ; graph
+                 {:root-id   id-or-ent
+                  :parent-id root-id
+                  :path      (into [root-id content-k] (u/ensure-vec k))}
+                 ; nested
+                 {:data id-or-ent
+                  :path (into (u/ensure-vec path) (remove nil?) [content-k k])}))))))))
+
+(comment
+
+ (def data
+   {1 {:type       :user
+       :first-name "Eva"
+       :last-name  "Luator"
+       :content    {:address 2}}
+    2 {:type   :address
+       :street "1 Long Infinite Loop"}})
+
+ (defn lookup [x]
+   (get data x))
+
+ (def root
+   (root.impl.core/ui-root
+    {:lookup       lookup
+     :dispatch-fn  :type
+     :content-keys [:content]
+     :content-spec integer?}))
+
+ ; To avoid a waterfall of requests and enable faster loads
+ ; a request can run `resolved-data` on the backend and the result merged into a
+ ; frontend data-store.
+ ; On the backend `lookup` can be blocking or async with an async version of
+ ; `resolved-data` that allows for multiple simultaneous `lookup`s/requests.
+ (resolved-data root {:root-id 1})
+ ;=> {:type       :user,
+ ;    :first-name "Eva",
+ ;    :last-name  "Luator",
+ ;    :content    {:address 2},
+ ;    :content-ui {:address {:type      :address,
+ ;                           :street    "1 Long Infinite Loop",
+ ;                           :parent-id 1,
+ ;                           :path      [1 :content :address]}}}
+
+ ; For the UI, render root as usual
+ [root :resolve {:root-id 1}]
+ ; or
+ [resolved-view root {:root-id 1}])

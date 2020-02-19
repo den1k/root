@@ -49,17 +49,17 @@
 
 (def data-promise
   (p/let
-   [pdata (fetch-json "https://hacker-news.firebaseio.com/v0/topstories.json")
-    top-50 (take 50 pdata)
-    items (p/all
-           (mapv
-            (comp fetch-json
-                  (fn [post-id]
-                    (str "https://hacker-news.firebaseio.com/v0/item/" post-id ".json")))
-            top-50))]
-   {:type    :ordered-list
-    :title   (str "Top " (count items) " Posts")
-    :content (vec items)}))
+    [pdata  (fetch-json "https://hacker-news.firebaseio.com/v0/topstories.json")
+     top-50 (take 50 pdata)
+     items  (p/all
+             (mapv
+              (comp fetch-json
+                    (fn [post-id]
+                      (str "https://hacker-news.firebaseio.com/v0/item/" post-id ".json")))
+              top-50))]
+    {:type    :ordered-list
+     :title   (str "Top " (count items) " Posts")
+     :content (vec items)}))
 
 (defn ^:export example-root []
   [ud/example
