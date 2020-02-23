@@ -266,6 +266,7 @@
            :transact (transact root b c)
            :lookup (with-meta (lookup b) {:root root})
            :view (add-view b c)
+           :resolve [rr/resolved-view root b]
            (dispatch-view a)))]
       :cljs
       [IFn
