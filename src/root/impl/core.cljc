@@ -266,7 +266,8 @@
            :transact (transact root b c)
            :lookup (with-meta (lookup b) {:root root})
            :view (add-view b c)
-           :resolve [rr/resolved-view root b]
+           :resolve (cond-> [rr/resolved-view root]
+                      b (conj b))
            (dispatch-view a)))]
       :cljs
       [IFn
@@ -282,7 +283,8 @@
           :transact (transact root b c)
           :lookup (with-meta (lookup b) {:root root})
           :view (add-view b c)
-          :resolve [rr/resolved-view root b]
+          :resolve (cond-> [rr/resolved-view root]
+                     b (conj b))
           (dispatch-view a)))]))
 
 (defn- view-multi-dispatch [opts]

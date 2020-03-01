@@ -125,21 +125,22 @@
         handlers (assoc :handlers (wrap handlers))))))
 
 (defn- deref-state-hook [x]
-  (if #?(:clj  false
-         :cljs (instance? uix.hooks.alpha/StateHook x))
-    (deref x)
-    x))
+  #?(:clj  x
+     :cljs (if (instance? uix.hooks.alpha/StateHook x)
+             (deref x)
+             x)))
 
 (defn js-promise? [p]
   (boolean (.-then p)))
 
 (defn- js-promise-hook [{:as x :keys [loading promise]}]
-  (let [x (or promise x)]
-    (if (and #?(:clj false) (js-promise? x))
-      (let [st (uix/state loading)]
-        (.then x (fn [x] (reset! st x)))
-        st)
-      x)))
+  #?(:clj  x
+     :cljs (let [x (or promise x)]
+             (if (js-promise? x)
+               (let [st (uix/state loading)]
+                 (.then x (fn [x] (reset! st x)))
+                 st)
+               x))))
 
 (defn resolved-view
   ([root]
