@@ -13,7 +13,6 @@
  (mount/start)
  (mount/start #'shadow-web)
  (mount/stop)
- (mount/stop #'zeal.serve/server #'zeal.db/node #'zeal.db/_init-db)
  (mount/find-all-states)
  (mount/running-states)
 

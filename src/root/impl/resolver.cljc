@@ -153,7 +153,7 @@
      (as-> data x
            (with-meta x {:root root})
            (cond-> x parent-id (assoc :parent-id parent-id))
-           (cond-> x path (assoc :path path))
+           (cond-> x (or path root-id) (assoc :path (or path [root-id])))
            (cond->> x
              root-id (wrap-actions-and-handlers root)) ; todo wrap-actions for nested
            (resolve-child-content

@@ -87,18 +87,30 @@
 
 (defmulti run-tx (fn [_root tx] (:op tx)))
 
+(defn- add [st path [ref ent :as ref+ent]]
+  (-> st
+      (update-in path
+                 (fn [x]
+                   (cond
+                     (vector? x) (conj x ref)
+                     :else ref)))
+      (conj ref+ent)))
+
 (defmethod run-tx :add
   [{:as root :keys [->ref+x]} {:as tx :keys [path ent]}]
-  (let [[ref :as ref+ent] (->ref+x ent)]
+  (let [ref+ent (->ref+x ent)]
+    (swap! state add path ref+ent)))
+
+(defmethod run-tx :add-many             ; todo remove-many
+  [{:as root :keys [->ref+x]} {:as tx :keys [path ents]}]
+  (let [refs+xs (mapv ->ref+x ents)]
     (swap! state
            (fn [st]
              (-> st
                  (update-in path
                             (fn [x]
-                              (cond
-                                (vector? x) (conj x ref)
-                                :else ref)))
-                 (conj ref+ent))))))
+                              (into (or x []) (map first) refs+xs)))
+                 (into refs+xs))))))
 
 (defn vec-plop [seq idx item]
   (vec (concat (take idx seq) [item] (drop idx seq))))
@@ -168,7 +180,8 @@
 (s/def ::tx
   (s/cat :op keyword?
          :path (s/? ::op-path)
-         :ent (s/? ::ent/entity)))
+         :ent (s/? ::ent/entity)
+         :ents (s/? (s/coll-of ::ent/entity))))
 
 (s/def ::txs (s/coll-of ::tx))
 
