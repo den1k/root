@@ -1,19 +1,18 @@
 (ns examples.core
   (:require
    [uix.dom.alpha :as uix.dom]
-   ;[examples.rich-document.views :refer [example-root]]
-   [examples.minimal.views :refer [example-root]]
-   ;[examples.fetch.views :refer [example-root]]
-   ;[examples.nested.views :refer [example-root]]
-   ;[examples.spec-dispatch.views :refer [example-root]]
+   ;[examples.rich-document.views :refer [render-fn]]
+   ;[examples.minimal.views :refer [render-fn]]
+   ;[examples.fetch.views :refer [render-fn]]
+   [examples.nested.views :refer [render-fn]]
+   ;[examples.spec-dispatch.views :refer [render-fn]]
    ))
 
 
 
 (defn start []
   ;(fetch/render-example)
-  (uix.dom/render
-   [example-root]
+  (render-fn
    (. js/document (getElementById "app"))))
 
 (defn ^:export init []

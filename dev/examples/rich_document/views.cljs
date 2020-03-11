@@ -42,23 +42,28 @@
 
 (def lookup lookup*)
 
+;; see def of <sub which throws in simple compilation
+(when-not (.-__REACT_DEVTOOLS_GLOBAL_HOOK__ js/window)
+  (set! (.-__REACT_DEVTOOLS_GLOBAL_HOOK__ js/window) nil))
+
 (defn lookup-sub [id]
   (xf/<sub [:get id]))
 
-(def root (rc/ui-root
-           {:->ref          ent->ref
-            :invoke-fn      (fn invoke [f x]
-                              ;(js/console.log :ent x)
-                              ^{:key (ent->ref x)}
-                              [f x])
-            :lookup         lookup
-            :lookup-sub     lookup-sub
-            :dispatch-fn    (fn [x] (or (:view x) (:type x)))
-            :transact       rc/transact
-            :content-keys   [:content]
-            :content-spec   integer?
-            :entity-actions entity-actions
-            :add-id         rc/add-id}))
+(def root
+  (rc/ui-root
+   {:->ref          ent->ref
+    :invoke-fn      (fn invoke [f x]
+                      ;(js/console.log :ent x)
+                      ^{:key (ent->ref x)}
+                      [f x])
+    :lookup         lookup
+    :lookup-sub     lookup-sub
+    :dispatch-fn    (fn [x] (or (:view x) (:type x)))
+    :transact       rc/transact
+    :content-keys   [:content]
+    :content-spec   integer?
+    :entity-actions entity-actions
+    :add-id         rc/add-id}))
 
 (global-shortcuts {"cmd+z"       #(root :transact [[:undo]] {:history? false})
                    "cmd+shift+z" #(root :transact [[:redo]] {:history? false})})
@@ -244,3 +249,6 @@
       " keys, looks up the data, resolves components and renders the following UI:"]]
     :root
     [root :resolve {:root-id 1}]}])
+
+(defn ^:export render-fn [dom-node]
+  (uix.dom/render [example-root] dom-node))

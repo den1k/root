@@ -1,6 +1,7 @@
 (ns examples.minimal.views
   (:require [root.impl.core :as rc]
-            [examples.util.dom :as ud]))
+            [examples.util.dom :as ud]
+            [uix.dom.alpha :as uix.dom]))
 
 (def data
   {1 {:type       :user
@@ -54,3 +55,6 @@
      [:p "where " [:code.red "lookup"] " is simply " [:code "#(get data %)"]]]
     :root
     [root :resolve {:root-id 1}]}])
+
+(defn ^:export render-fn [dom-node]
+  (uix.dom/render [example-root] dom-node))

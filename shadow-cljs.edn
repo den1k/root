@@ -24,9 +24,9 @@
                         :preloads    [devtools.preload]}
            }
           :examples
-          {:target           :browser
-           :output-dir       "docs/js/compiled"
-           :asset-path       "/js/compiled"
+          {:target     :browser
+           :output-dir "docs/js/compiled"
+           :asset-path "/js/compiled"
 
-           :modules          {:main
-                              {:entries [examples.docs]}}}}}
+           :modules    {:main
+                        {:entries [examples.docs]}}}}}

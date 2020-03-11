@@ -52,7 +52,7 @@
   (second (read-string (slurp fl))))
 
 (defn fl->example-js-render-fn [fl-ns]
-  (-> (str "examples.docs.render(" fl-ns ".example-root)")
+  (-> (str fl-ns ".render-fn(document.getElementById('app'))")
       (str/replace #"-" "_")))
 
 (defn file->index-html [fl-ns]
@@ -71,14 +71,16 @@
 
  (let [files (files->index-html-file-names+content (views-files))
        ;; fixme remove this once multiple DB's are supported
-       files (remove (fn [[file-name]]
+       #_#_files (remove (fn [[file-name]]
                        (re-find #"nested" file-name))
                      files)]
+
+   files
    (doseq [[fl-name content] files]
      (spit (str docs-dir "/" fl-name) content)))
 
- ;(shadow.api/compile :examples)
- (shadow.api/release :examples)
+ (shadow.api/compile :examples)
+ ;(shadow.api/release :examples)
 
  )
 

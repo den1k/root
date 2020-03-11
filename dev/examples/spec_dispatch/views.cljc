@@ -3,7 +3,8 @@
             [clojure.spec.alpha :as s]
             [clojure.test.check.generators]
             [clojure.string :as str]
-            [examples.util.dom :as ud]))
+            [examples.util.dom :as ud]
+            [uix.dom.alpha :as uix.dom]))
 
 (s/def ::email (s/with-gen (s/and string? #(str/includes? % "@"))
                            #(s/gen #{"foo@bar.com" "bar@baz.com"})))
@@ -123,3 +124,6 @@
      ]
     :root
     [root :resolve {:data data}]}])
+
+(defn ^:export render-fn [dom-node]
+  (uix.dom/render [example-root] dom-node))

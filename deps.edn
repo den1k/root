@@ -23,4 +23,6 @@
     binaryage/devtools     {:mvn/version "0.9.11"}
     den1k/shortcuts        {:git/url "https://github.com/den1k/shortcuts"
                             :sha     "871cc945bc5d6f6af4b1a46e5918c36e3d4f1949"}
-    kitchen-async          {:mvn/version "0.1.0-SNAPSHOT"}}}}}
+    kitchen-async          {:mvn/version "0.1.0-SNAPSHOT"}
+    ;; temp add reagent until UIX lands multiple DBs / cursors
+    reagent                {:mvn/version "0.10.0"}}}}}

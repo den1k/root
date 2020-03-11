@@ -1,7 +1,8 @@
 (ns examples.fetch.views
   (:require [root.impl.core :as rc]
             [kitchen-async.promise :as p]
-            [examples.util.dom :as ud]))
+            [examples.util.dom :as ud]
+            [uix.dom.alpha :as uix.dom]))
 
 (defn fetch-json [str]
   (p/some-> (js/fetch str)
@@ -86,3 +87,6 @@
     [root :resolve {:data {:loading {:type   :loading
                                      :markup "Your favorite posts"}
                            :promise data-promise}}]}])
+
+(defn ^:export render-fn [dom-node]
+  (uix.dom/render [example-root] dom-node))
