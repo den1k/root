@@ -3,6 +3,6 @@
 .nrepl-port
 .shadow-cljs/
 node_modules/
-public/js
+resources/public
 *.iml
 .DS_Store

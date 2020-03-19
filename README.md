@@ -16,9 +16,9 @@ root is data first. It recurses through your data resolving UI components along 
 ## live examples
 
 - [minimal](https://den1k.github.io/root/minimal.html)
+- [DataScript notebook](https://den1k.github.io/root/datascript.html)
 - [hackernews reader](https://den1k.github.io/root/fetch.html)
 - [using spec](https://den1k.github.io/root/spec-dispatch.html)
-- [AST code editor](https://den1k.github.io/root/nested.html)
 - [a struggling Notion clone in 200 LoC (reactive)](https://den1k.github.io/root/rich-document.html)
 
 ## code example

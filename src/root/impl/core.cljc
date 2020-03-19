@@ -353,9 +353,6 @@
           "Root Warning: static use only. Missing one or more required"
           "functions: lookup-sub, transact, ent->ref, add-id.")))))
 
-(defn __temp-default-ent->ref [ent]
-  (:id ent))
-
 (defn ->post-fixed-keyword
   ([post-fix] (fn [x] (->post-fixed-keyword post-fix x)))
   ([post-fix x]
@@ -377,8 +374,7 @@
 (defn ui-root
   [{:as   opts
     :keys [dispatch-fn default-view invoke-fn lookup lookup-sub ->ref content-spec]
-    :or   {default-view default-view*
-           ->ref        __temp-default-ent->ref}}]
+    :or   {default-view default-view*}}]
   (opts-warn opts)
   (let [opts (merge
               default-opts

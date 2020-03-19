@@ -1,0 +1,4 @@
+/* better styles for notebook */
+
+.root-notebook p,h1,h2,h3,h4,h5,h6 { margin-top: 0}
+.root-markdown code {background: #EEEEEE; padding: 2px 4px; border-radius: 3px; color: tomato}

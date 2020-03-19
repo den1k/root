@@ -126,7 +126,7 @@
 
 (defn- deref-state-hook [x]
   #?(:clj  x
-     :cljs (if (instance? uix.hooks.alpha/StateHook x)
+     :cljs (if (implements? IDeref x)
              (deref x)
              x)))
 
@@ -137,6 +137,7 @@
   #?(:clj  x
      :cljs (let [x (or promise x)]
              (if (js-promise? x)
+               ;; fixme UIX dep
                (let [st (uix/state loading)]
                  (.then x (fn [x] (reset! st x)))
                  st)
@@ -145,8 +146,8 @@
 (defn resolved-view
   ([root]
    (resolved-view root (select-keys root [:root-id :data])))
-  ([{:as root :keys [lookup-sub]} {:keys [root-id data parent-id path]}]
-   ;#?(:cljs (js/console.log :resolving :root-id root-id :parent-id parent-id :path path))
+  ([{:as root :keys [lookup-sub ->ref]} {:as m :keys [root-id data parent-id path]}]
+   ;#?(:cljs (js/console.log :resolving m))
    (when-let [data (some-> (or data (lookup-sub (or root-id path)))
                            js-promise-hook
                            deref-state-hook)]
@@ -159,10 +160,10 @@
            (resolve-child-content
             root
             x
-            (fn [{:keys [k id-or-ent content-k]}]
+            (fn [{:as m :keys [k id-or-ent content-k]}]
               [resolved-view
                root
-               (if-not (coll? id-or-ent)
+               (if root-id
                  ; graph
                  {:root-id   id-or-ent
                   :parent-id root-id
@@ -175,7 +176,7 @@
 (defn resolved-data
   ([root]
    (resolved-view root (select-keys root [:root-id :data])))
-  ([{:as root :keys [lookup]} {:keys [root-id data parent-id path]}]
+  ([{:as root :keys [lookup ->ref]} {:keys [root-id data parent-id path]}]
    (when-let [data (or data (lookup (or root-id path)))]
      (as-> data x
            (with-meta x {:root root})
@@ -187,7 +188,7 @@
             (fn [{:keys [k id-or-ent content-k]}]
               (resolved-data
                root
-               (if-not (coll? id-or-ent)
+               (if (->ref id-or-ent)
                  ; graph
                  {:root-id   id-or-ent
                   :parent-id root-id

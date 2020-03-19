@@ -5,7 +5,8 @@
    [clojure.string :as str]
    [root.impl.util :as u]
    [uix.dom.alpha]
-   [uix.dom.alpha :as uix.dom]))
+   [uix.dom.alpha :as uix.dom])
+  (:import (org.apache.commons.io FileUtils)))
 
 (defn document
   [{:as opts :keys [js styles links meta body]}]
@@ -36,10 +37,12 @@
       :meta   [{:name    "viewport"
                 :content "width=device-width, initial-scale=1"}]
       :styles []
-      :links  ["https://unpkg.com/tachyons@4.10.0/css/tachyons.min.css"]
-      :js     [{:src "js/compiled/main.js"}
-               #_{:src "js/compiled/main.js"}
-               #_{:script "zeal.ui.core.init()"}]})]])
+      :links  ["https://unpkg.com/tachyons@4.10.0/css/tachyons.min.css"
+               "css/app.css"
+               "css/codemirror.css"
+               "css/codemirror/duotone-light.css"
+               "https://fonts.googleapis.com/css?family=Fira+Code&display=swap"]
+      :js     [{:src "js/compiled/main.js"}]})]])
 
 (defn views-files []
   (keep (fn [fl]
@@ -69,18 +72,25 @@
 
 (comment
 
+
+ (FileUtils/copyDirectory
+  (io/file "resources/public/css")
+  (io/file (str docs-dir "/css")))
+
+
  (let [files (files->index-html-file-names+content (views-files))
        ;; fixme remove this once multiple DB's are supported
-       #_#_files (remove (fn [[file-name]]
-                       (re-find #"nested" file-name))
-                     files)]
+       files (remove (fn [[file-name]]
+                       ;; nested doesn't work in advanced compilation
+                           (re-find #"nested" file-name))
+                         files)]
 
    files
    (doseq [[fl-name content] files]
      (spit (str docs-dir "/" fl-name) content)))
 
- (shadow.api/compile :examples)
- ;(shadow.api/release :examples)
+ ;(shadow.api/compile :examples)
+ (shadow.api/release :examples)
 
  )
 
