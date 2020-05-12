@@ -112,6 +112,29 @@
                               (into (or x []) (map first) refs+xs)))
                  (into refs+xs))))))
 
+(defmethod run-tx :set-many
+  [{:as root :keys [->ref+x]} {:as tx :keys [path ents]}]
+  (let [refs+xs (mapv ->ref+x ents)]
+    (swap! state
+           (fn [st]
+             (-> st
+                 (assoc-in path (into [] (map first) refs+xs))
+                 (into refs+xs))))))
+
+(defmethod run-tx :assoc
+  [{:as root} {:as tx :keys [path val]}]
+  (swap! state
+         (fn [st]
+           (-> st
+               (assoc (first path) val)))))
+
+(defmethod run-tx :update
+  [{:as root} {:as tx :keys [path val args]}]
+  (swap! state
+         (fn [st]
+           (-> st
+               (update (first path) val args)))))
+
 (defn vec-plop [seq idx item]
   (vec (concat (take idx seq) [item] (drop idx seq))))
 
@@ -168,8 +191,10 @@
            (fn [st]
              (-> st (conj ref+ent))))))
 
+;; FIXME reuse content-spec and allow users to provide entity-spec
+
 (s/def ::op-path
-  (s/and #(or (keyword? %) (vector? %))
+  (s/and #(not (map? %))                ;; not entity
          (s/conformer
           (fn [x]
             (if (keyword? x)
@@ -180,8 +205,10 @@
 (s/def ::tx
   (s/cat :op keyword?
          :path (s/? ::op-path)
-         :ent (s/? ::ent/entity)
-         :ents (s/? (s/coll-of ::ent/entity))))
+         :ent (s/? map?)                ; ::ent/entity
+         :ents (s/? (s/coll-of map?))
+         :val (s/? any?)
+         :args (s/* any?)))              ; (s/coll-of ::ent/entity)
 
 (s/def ::txs (s/coll-of ::tx))
 
@@ -274,10 +301,16 @@
          [this a b]
          (this a b nil))
        (invoke
-         [{:as root :keys [transact lookup]} a b c]
+         [{:as root :keys [transact lookup lookup-sub]} a b c]
          (case a
            :transact (transact root b c)
-           :lookup (with-meta (lookup b) {:root root})
+           :lookup (let [ret (lookup b)]
+                     (cond-> ret
+                       ;; temp CLJC test to check whether IMeta can be added
+                       (coll? ret) (with-meta {:root root})))
+           :lookup-sub (let [ret (lookup-sub b)]
+                         (cond-> ret
+                           (coll? ret) (with-meta {:root root})))
            :view (add-view b c)
            :resolve (cond-> [rr/resolved-view root]
                       b (conj b))
@@ -291,10 +324,16 @@
         [this a b]
         (this a b nil))
        (-invoke
-        [{:as root :keys [transact lookup]} a b c]
+        [{:as root :keys [transact lookup lookup-sub]} a b c]
         (case a
           :transact (transact root b c)
-          :lookup (with-meta (lookup b) {:root root})
+          :lookup (let [ret (lookup b)]
+                    (cond-> ret
+                      ;; temp CLJC test to check whether IMeta can be added
+                      (coll? ret) (with-meta {:root root})))
+          :lookup-sub (let [ret (lookup-sub b)]
+                        (cond-> ret
+                          (coll? ret) (with-meta {:root root})))
           :view (add-view b c)
           :resolve (cond-> [rr/resolved-view root]
                      b (conj b))

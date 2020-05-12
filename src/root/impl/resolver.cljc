@@ -43,7 +43,7 @@
            (assoc out k
                       (resolve-content
                        root
-                       content-k        ;; maybe wrong
+                       content-k
                        v
                        (comp
                         f
