@@ -109,8 +109,13 @@
              (-> st
                  (update-in path
                             (fn [x]
-                              (into (or x []) (map first) refs+xs)))
+                              (->> refs+xs
+                                   (into (or x []) (map first))
+                                   ;; or how about an ordered-set for cljs?
+                                   not-empty distinct vec)))
                  (into refs+xs))))))
+
+
 
 (defmethod run-tx :set-many
   [{:as root :keys [->ref+x]} {:as tx :keys [path ents]}]
@@ -122,11 +127,32 @@
                  (into refs+xs))))))
 
 (defmethod run-tx :assoc
-  [{:as root} {:as tx :keys [path val]}]
+  [{:as root :keys [->ref]} {:as tx :keys [ent path val]}]
   (swap! state
          (fn [st]
            (-> st
                (assoc (first path) val)))))
+
+(defmethod run-tx :assoc-in
+  [{:as root} {:as tx :keys [path val]}]
+  (swap! state
+         (fn [st]
+           (-> st
+               (assoc-in path val)))))
+
+(defmethod run-tx :dissoc
+  [{:as root} {:as tx :keys [path]}]
+  (swap! state
+         (fn [st]
+           (-> st
+               (dissoc (first path))))))
+
+(defmethod run-tx :dissoc-in
+  [{:as root} {:as tx :keys [path val]}]
+  (swap! state
+         (fn [st]
+           (-> st
+               (md/dissoc-in path)))))
 
 (defmethod run-tx :update
   [{:as root} {:as tx :keys [path val args]}]
@@ -208,7 +234,7 @@
          :ent (s/? map?)                ; ::ent/entity
          :ents (s/? (s/coll-of map?))
          :val (s/? any?)
-         :args (s/* any?)))              ; (s/coll-of ::ent/entity)
+         :args (s/* any?)))             ; (s/coll-of ::ent/entity)
 
 (s/def ::txs (s/coll-of ::tx))
 
@@ -390,7 +416,7 @@
        (when (contains? #{:static :reactive} root-type)
          (js/console.warn
           "Root Warning: static use only. Missing one or more required"
-          "functions: lookup-sub, transact, ent->ref, add-id.")))))
+          "functions: lookup-sub, transact, ->ref, add-id.")))))
 
 (defn ->post-fixed-keyword
   ([post-fix] (fn [x] (->post-fixed-keyword post-fix x)))
