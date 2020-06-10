@@ -9,6 +9,8 @@
             [examples.rich-document.mock-data :as mock-data]
             [uix.core.alpha :as uix]))
 
+;; FIXME ACTIONS ARE CURRENTLY BROKEN
+
 (def entity-actions
   {:global
    {:undo [[:undo]]
@@ -60,8 +62,8 @@
     :lookup-sub     lookup-sub
     :dispatch-fn    (fn [x] (or (:view x) (:type x)))
     :transact       rc/transact
-    :content-keys   [:content]
-    :content-spec   integer?
+    :->content-keys (constantly [:content])
+    :->content-spec (constantly integer?)
     :entity-actions entity-actions
     :add-id         rc/add-id}))
 

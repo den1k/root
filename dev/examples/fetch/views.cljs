@@ -11,9 +11,9 @@
 
 (def root
   (rc/ui-root
-   {:dispatch-fn  :type
-    :content-keys [:content]
-    :content-spec (fn [x] (get x :id))}))
+   {:dispatch-fn    :type
+    :->content-keys (constantly [:content])
+    :->content-spec  (constantly (fn [x] (get x :id)))}))
 
 (root :view :loading
   (fn [{:keys [markup]}]

@@ -161,6 +161,10 @@
            (-> st
                (update (first path) val args)))))
 
+(defmethod run-tx :into
+  [{:as root} {:as tx :keys [ent]}]
+  (swap! state into ent))
+
 (defn vec-plop [seq idx item]
   (vec (concat (take idx seq) [item] (drop idx seq))))
 
@@ -288,16 +292,16 @@
          m)))
 
 (defn child-views [ent]
-  (let [root (-> ent meta :root)]
-    (when-let [child-views (not-empty (select-keys ent (:content-ui-keys root)))]
+  (let [{:as root :keys [->ui-keys]} (-> ent meta :root)]
+    (when-let [child-views (not-empty (select-keys ent (->ui-keys ent)))]
       [domify-map default-child-view child-views])))
 
 (defn default-view* [ent]
   ;; fixme pass root proper
-  (let [root      (-> ent meta :root)
-        non-views (apply dissoc ent
-                         :actions :path :parent-id :handlers
-                         (concat (:content-keys root) (:content-ui-keys root)))]
+  (let [{:as root :keys [->content-keys ->ui-keys]} (-> ent meta :root)
+        shrunk (apply dissoc ent
+                      :actions :path :parent-id :handlers
+                      (concat (->content-keys ent) (->ui-keys ent)))]
 
     [:div.mb2
      {:style {:padding 10
@@ -313,7 +317,7 @@
                     (if too-long?
                       [:details [:summary.outline-0 k'] pretty-v]
                       [:div k' " " pretty-v])))
-                non-views))
+                shrunk))
      [child-views ent]]))
 
 (defrecord UIRoot
@@ -374,7 +378,9 @@
                 (fn with-name [dispatch-val view]
                   #?(:cljs
                      (set! (.-displayName view)
-                           (str "root-view__" (name dispatch-val))))
+                           (str "root-view__" (if (ident? dispatch-val)
+                                                (name dispatch-val)
+                                                (pr-str dispatch-val)))))
                   (add-method dispatch-val view))))
       (set/rename-keys {:add-method    :add-view
                         :remove-method :remove-view
@@ -386,14 +392,14 @@
 (s/def ::dispatch-fn ifn?)
 (s/def ::lookup ifn?)
 (s/def ::lookup-sub ifn?)
-(s/def ::content-keys (s/coll-of keyword?))
-(s/def ::content-spec (s/or :fn ifn? :spec s/spec?))
+(s/def ::->content-keys ifn?)
+(s/def ::->content-spec ifn?)
 (s/def ::->ref ifn?)
 (s/def ::transact ifn?)
 (s/def ::add-id ifn?)
 
 (s/def ::ui-root-data
-  (s/keys :req-un [::dispatch-fn ::content-spec ::content-keys]))
+  (s/keys :req-un [::dispatch-fn ::->content-spec ::->content-keys]))
 
 (s/def ::ui-root-static
   (s/and ::ui-root-data (s/keys :req-un [::lookup])))
@@ -423,12 +429,13 @@
   ([post-fix x]
    (keyword (str (name x) post-fix))))
 
-(defn- child-view-mappings [{:keys [content-keys content-post-fix]
-                             :or   {content-post-fix "-ui"}}]
-  (let [content-ui-keys     (mapv (->post-fixed-keyword content-post-fix) content-keys)
-        content-key->ui-key (zipmap content-keys content-ui-keys)]
-    {:content-keys        content-keys
-     :content-ui-keys     content-ui-keys
+(defn- child-view-mappings [{:keys [->content-keys content-post-fix]}]
+  (let [content-key->ui-key   (memoize
+                               (partial ->post-fixed-keyword content-post-fix))
+        content-keys->ui-keys (memoize
+                               (partial mapv content-key->ui-key))]
+    {:->ui-keys           (fn [ent]
+                            (content-keys->ui-keys (->content-keys ent)))
      :content-key->ui-key content-key->ui-key}))
 
 (def ^:private default-opts
@@ -438,12 +445,11 @@
 
 (defn ui-root
   [{:as   opts
-    :keys [dispatch-fn default-view invoke-fn lookup lookup-sub ->ref content-spec]
+    :keys [dispatch-fn default-view invoke-fn lookup lookup-sub ->ref]
     :or   {default-view default-view*}}]
   (opts-warn opts)
   (let [opts (merge
               default-opts
-              {:resolve-spec (rr/->resolver-spec content-spec)}
               opts)]
     (map->UIRoot
      (merge

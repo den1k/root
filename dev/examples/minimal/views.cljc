@@ -19,10 +19,10 @@
 
 (def root
   (rc/ui-root
-   {:lookup       lookup
-    :dispatch-fn  :type
-    :content-keys [:content]
-    :content-spec integer?}))
+   {:lookup         lookup
+    :dispatch-fn    :type
+    :->content-keys (constantly [:content])
+    :->content-spec (constantly integer?)}))
 
 (root :view :profile-pic
   (fn [{:keys [src]}]

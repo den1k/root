@@ -42,11 +42,11 @@
 
 (def root
   (rc/ui-root
-   {:lookup       lookup
-    :lookup-sub   lookup-sub
-    :dispatch-fn  :type
-    :content-keys (keys schema)
-    :content-spec #(boolean (and (map? %) (:db/id %)))}))
+   {:lookup         lookup
+    :lookup-sub     lookup-sub
+    :dispatch-fn    :type
+    :->content-keys (constantly (keys schema))
+    :->content-spec (constantly #(boolean (and (map? %) (:db/id %))))}))
 
 (def default-text "type something...")
 

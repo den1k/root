@@ -50,4 +50,3 @@
   (cond
     (or (sequential? x) (set? x)) (into (empty x) cat (reverse xs))
     (map? x) (apply merge-with deep-merge xs)))
-

@@ -52,8 +52,8 @@
   (rc/ui-root
    {:dispatch-fn             :op
     :lookup                  lookup
-    :content-keys            [:fn :args :items :vals :keys :statements :ret :test :then :else]
-    :content-spec            (s/and map? (fn [x] (:op x)))
+    :->content-keys          (constantly [:fn :args :items :vals :keys :statements :ret :test :then :else])
+    :->content-spec          (constantly (s/and map? (fn [x] (:op x))))
     :contents-hiccup-wrapper []}))
 
 (defn ana-ent->css-classes [{:as ent :keys [op tag form]}]
