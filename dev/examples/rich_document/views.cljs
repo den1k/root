@@ -4,6 +4,7 @@
             [examples.util.string :as ustr]
             [uix.dom.alpha :as uix.dom]
             [root.impl.core :as rc]
+            [root.impl.transact :as rt]
             [root.impl.util :as u]
             [xframe.core.alpha :as xf]
             [examples.rich-document.mock-data :as mock-data]
@@ -32,7 +33,7 @@
 (def projected-data
   (u/project (fn [ent] [(ent->ref ent) ent]) mock-data/data))
 
-(reset! rc/state projected-data)
+(reset! rt/state projected-data)
 
 (defn lookup* [x]
   (if (coll? x)
@@ -61,11 +62,11 @@
     :lookup         lookup
     :lookup-sub     lookup-sub
     :dispatch-fn    (fn [x] (or (:view x) (:type x)))
-    :transact       rc/transact
+    :transact       rt/transact
     :->content-keys (constantly [:content])
     :->content-spec (constantly integer?)
     :entity-actions entity-actions
-    :add-id         rc/add-id}))
+    :add-id         rt/add-id}))
 
 (global-shortcuts {"cmd+z"       #(root :transact [[:undo]] {:history? false})
                    "cmd+shift+z" #(root :transact [[:redo]] {:history? false})})

@@ -217,7 +217,9 @@
  (def root
    (root.impl.core/ui-root
     {:lookup         lookup
+     :->ref          :id
      :dispatch-fn    :type
+     :->entity-spec  (constantly (fn [x] (:type x)))
      :->content-keys (constantly [:content])
      :->content-spec (constantly integer?)}))
 
