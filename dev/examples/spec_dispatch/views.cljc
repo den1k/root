@@ -48,7 +48,7 @@
   (rc/ui-root
    {:dispatch-fn    #(first (s/conform ::views %))
     :->content-keys (constantly [:address :friends])
-    :->content-spec (constantly ::views)}))
+    :ref-spec       ::views}))
 
 (root :view :user
   (fn [{:keys [first-name last-name email friends-ui address-ui open?]}]

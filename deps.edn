@@ -8,10 +8,10 @@
 
   uix.core                  {:git/url   "https://github.com/roman01la/uix.git"
                              :deps/root "core"
-                             :sha       "a34f04f6c5e4cb39b30a9514519c4a7e0cfe6c93"}
+                             :sha       "fc98f57a01d16228e709fb1ad4c2a504c65964d3"}
   uix.dom                   {:git/url   "https://github.com/roman01la/uix.git"
                              :deps/root "dom"
-                             :sha       "a34f04f6c5e4cb39b30a9514519c4a7e0cfe6c93"}}
+                             :sha       "fc98f57a01d16228e709fb1ad4c2a504c65964d3"}}
  :aliases
  {:dev
   {:extra-deps  {mount {:mvn/version "0.1.16"}}

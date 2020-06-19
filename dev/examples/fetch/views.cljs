@@ -13,7 +13,7 @@
   (rc/ui-root
    {:dispatch-fn    :type
     :->content-keys (constantly [:content])
-    :->content-spec  (constantly (fn [x] (get x :id)))}))
+    :entity-spec    (fn [x] (get x :id))}))
 
 (root :view :loading
   (fn [{:keys [markup]}]

@@ -1,14 +1,14 @@
 (ns root.impl.core-test
   (:require [clojure.test :refer :all])
-  (:require [root.impl.core :refer :all]))
+  (:require [root.impl.core :as r :refer :all]))
 
 (def test-root
   (ui-root
    {:->ref          :id
     :dispatch-fn    :type
-    :->entity-spec  (constantly (fn [x] (:type x)))
-    :->content-keys (constantly [:content])
-    :->content-spec (constantly integer?)}))
+    :entity-spec    (fn [x] (:type x))
+    :ref-spec       integer?
+    :->content-keys (constantly [:content])}))
 
 (deftest normalize-test
   (is (= (normalize test-root {:id 1 :type :foo})

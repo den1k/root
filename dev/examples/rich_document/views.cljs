@@ -45,17 +45,12 @@
 
 (def lookup lookup*)
 
-;; see def of <sub which throws in simple compilation
-(when-not (.-__REACT_DEVTOOLS_GLOBAL_HOOK__ js/window)
-  (set! (.-__REACT_DEVTOOLS_GLOBAL_HOOK__ js/window) nil))
-
 (defn lookup-sub [id]
   (xf/<sub [:get id]))
 
 (def root
   (rc/ui-root
-   {:->ref          ent->ref
-    :invoke-fn      (fn invoke [f x]
+   {:invoke-fn      (fn invoke [f x]
                       ;(js/console.log :ent x)
                       ^{:key (ent->ref x)}
                       [f x])
@@ -64,7 +59,8 @@
     :dispatch-fn    (fn [x] (or (:view x) (:type x)))
     :transact       rt/transact
     :->content-keys (constantly [:content])
-    :->content-spec (constantly integer?)
+    :->ref          ent->ref
+    :ref-spec       integer?
     :entity-actions entity-actions
     :add-id         rt/add-id}))
 

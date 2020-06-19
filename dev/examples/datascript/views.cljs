@@ -46,7 +46,7 @@
     :lookup-sub     lookup-sub
     :dispatch-fn    :type
     :->content-keys (constantly (keys schema))
-    :->content-spec (constantly #(boolean (and (map? %) (:db/id %))))}))
+    :entity-spec    #(boolean (and (map? %) (:db/id %)))}))
 
 (def default-text "type something...")
 

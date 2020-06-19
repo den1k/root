@@ -22,7 +22,7 @@
    {:lookup         lookup
     :dispatch-fn    :type
     :->content-keys (constantly [:content])
-    :->content-spec (constantly integer?)}))
+    :ref-spec       integer?}))
 
 (root :view :profile-pic
   (fn [{:keys [src]}]

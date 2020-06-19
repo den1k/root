@@ -14,29 +14,29 @@
     :transact       (constantly ::transacted)
     :entity-actions mock/entity-actions
     :add-id         mock/add-id
-    :->content-spec (constantly integer?)
+    :entity-spec    map?
+    :ref-spec       integer?
     :->content-keys (constantly [:content])
     :invoke-fn      (fn [_ ent]
                       ;; TEST only: ignore component fn, return entity
                       ent)}))
 
-
 (deftest resolver-test
-  (let [resolved-10        {:id         10,
-                            :content    [11 12]
-                            :content-ui [:<>
-                                         {:id        11,
-                                          :type      :button,
-                                          :markup    ["undo"],
-                                          ;:handlers  {:on-click [:global :undo]},
-                                          :parent-id 10,
-                                          :path      [10 :content 0]}
-                                         {:id        12,
-                                          :type      :button,
-                                          :markup    ["redo"],
-                                          ;:handlers  {:on-click [:global :redo]},
-                                          :parent-id 10,
-                                          :path      [10 :content 1]}]}]
+  (let [resolved-10 {:id         10,
+                     :content    [11 12]
+                     :content-ui [:<>
+                                  {:id        11,
+                                   :type      :button,
+                                   :markup    ["undo"],
+                                   ;:handlers  {:on-click [:global :undo]},
+                                   :parent-id 10,
+                                   :path      [10 :content 0]}
+                                  {:id        12,
+                                   :type      :button,
+                                   :markup    ["redo"],
+                                   ;:handlers  {:on-click [:global :redo]},
+                                   :parent-id 10,
+                                   :path      [10 :content 1]}]}]
 
     (is (= (assoc (get mock/state 3) :path [3])
            (rr/resolved-data test-root {:root-id 3})))
