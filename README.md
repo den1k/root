@@ -4,6 +4,11 @@
 
 root is a recursive UI resolver.
 
+- Approaches to UI development like react.js + graphQL require UI components to __request__ data in a shape that satisfies the UI tree. This means the shape of the data is determined by the UI tree. Root takes an inverse approach where the UI tree is determined by the shape of the data.
+- A major benefit of this approach is that the UI layout is thus entirely determined by data, data that can be traversed, transformed and stored in arbitrary ways and by arbitrary means.
+- This is powerful for unstructured, user-determined, block-based UI's like rich documents (think Roam Research, Notion etc.) enabling queries and functions that, based on users' demands,  __derive__ the optimal presentation of a document.
+
+
 **Does root manage state?**
 
 No, root is agnostic to your state and state management. It cares only for a `lookup` function.
