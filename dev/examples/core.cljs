@@ -1,11 +1,11 @@
 (ns examples.core
   (:require
    [uix.dom.alpha :as uix.dom]
-   ;[examples.rich-document.views :refer [render-fn]]
+   [examples.rich-document.views :refer [render-fn]]
    ;[examples.minimal.views :refer [render-fn]]
    ;[examples.fetch.views :refer [render-fn]]
    ;[examples.datascript.views :refer [render-fn]]
-   [examples.table.views :refer [render-fn]]
+   ;[examples.table.views :refer [render-fn]]
    ;[examples.nested.views :refer [render-fn]]
    ;[examples.spec-dispatch.views :refer [render-fn]]
    ))

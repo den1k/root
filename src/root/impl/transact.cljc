@@ -446,7 +446,11 @@
 (defn transact2
   ([root txs]
    (transact2 root txs {:history? true}))
-  ([{:as root :keys [state]} txs {:keys [history?]}]
+  ([{:as root
+     :keys [state on-transacted]
+     :or {on-transacted (constantly nil)}}
+    txs
+    {:keys [history?]}]
    ;; fixme, just like whole tx is transacted at once,
    ;; whole tx should be added to the history log to be undone in one step
    (when history?
@@ -457,7 +461,7 @@
          (swap! state #(run-tx2 root % ctx)))
 
      ;; todo make this a configurable callback
-     (xf/notify-listeners!)
+     (on-transacted next-st)
      next-st)))
 
 ;(s/explain ::tx2 [:add [1 2 3] #_{}])

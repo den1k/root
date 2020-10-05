@@ -1,6 +1,7 @@
 (ns root.impl.core-test
   (:require [clojure.test :refer :all])
-  (:require [root.impl.core :as r :refer :all]))
+  (:require [root.impl.core :as r :refer :all]
+            [cljs.test :as test]))
 
 (def test-root
   (ui-root

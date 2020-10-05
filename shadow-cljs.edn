@@ -1,6 +1,5 @@
 ;; shadow-cljs configuration
 {:deps   {:aliases [:dev :cljs :dev/cljs]}
- :http   {:port 1234}
 
  ;; set an nrepl port for connection to a REPL.
  :nrepl  {:port 8888}

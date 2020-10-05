@@ -222,8 +222,8 @@
               ;                                                         (->ui-keys %))))
               content-spec                (or ref-spec entity-spec)
               lookup-sub                  (if (nil? lookup-sub) lookup lookup-sub)
-              entity-or-ref-resolver-spec (rr/resolver-spec (s/or :entity entity-spec
-                                                                  :ref ref-spec))]
+              entity-or-ref-resolver-spec (rr/resolver-spec (s/or :entity (or entity-spec (constantly false))
+                                                                  :ref (or ref-spec (constantly false))))]
           {:->ref                       ->ref
            :->ref+x                     (fn ->ref+x [x] [(->ref x) x])
            :content-spec                content-spec

@@ -11,13 +11,13 @@
   (let [content-spec    (s/spec content-spec)
         nested-contents (s/* content-spec)
         contents-map    (s/and not-empty
-                               (s/map-of keyword?
-                                         (s/or :entity content-spec ;; rename to one/many
-                                               :entities nested-contents)))]
+                          (s/map-of keyword?
+                            (s/or :entity content-spec      ;; rename to one/many
+                              :entities nested-contents)))]
     (s/spec
       (s/or :content content-spec
-            :contents nested-contents
-            :content-map contents-map))))
+        :contents nested-contents
+        :content-map contents-map))))
 
 (defn resolve-content
   ([root ent content-k content] (resolve-content root ent content-k content identity))
@@ -32,14 +32,14 @@
 
        :contents
        (with-meta (into contents-hiccup-wrapper
-                        (map-indexed
-                          (fn [k [content-type content]]
-                            (f {:content-type content-type
-                                :k            k
-                                :content-k    content-k
-                                :id-or-ent    content})))
-                        conf-content)
-                  {::type :entities})
+                    (map-indexed
+                      (fn [k [content-type content]]
+                        (f {:content-type content-type
+                            :k            k
+                            :content-k    content-k
+                            :id-or-ent    content})))
+                    conf-content)
+         {::type :entities})
 
        :content-map
        (with-meta
@@ -75,60 +75,61 @@
      ent
      (->content-keys ent))))
 
-;(s/def ::txs-path (s/coll-of keyword?))
-;
-;(s/def ::op-path
-;  (s/and #(or (keyword? %) (vector? %))
-;         (s/conformer
-;          (fn [x]
-;            (if (keyword? x)
-;              [x]
-;              (and (vector? x) (not-empty x)))))))
-;
-;(s/def ::partial-tx
-;  (s/cat :op keyword?
-;         :path (s/? ::op-path)
-;         :ent (s/? ::ent/partial-entity)))
-;
-;(s/def ::partial-txs (s/coll-of ::partial-tx))
-;
-;(s/def ::partial-txs-or-txs-path
-;  (s/or :partial-txs ::partial-txs
-;        :path ::txs-path))
-;
-;(defn wrap-actions-and-handlers
-;  [{:as root :keys [dispatch-fn transact entity-actions add-id ->ref]}
-;   {:as orig-ent :keys [actions handlers parent-id]}]
-;  (letfn [(resolve-txs [conformed txs-or-txs-path]
-;            (case (first conformed)
-;              :partial-txs txs-or-txs-path
-;              :path (get-in entity-actions txs-or-txs-path)))
-;          (form-tx [tx]
-;            (let [{:keys [op path ent]} (u/conform! ::partial-tx tx)]
-;              (cond-> [op]
-;                path (conj (replace {:<- parent-id} path))
-;                (not path) (conj (:path orig-ent))
-;                ent (conj (cond-> ent (nil? (->ref ent)) add-id))
-;                (not ent) (conj orig-ent))))
-;          (form-txs [txs]
-;            (mapv form-tx txs))
-;          (wrap [actions-map]
-;            (md/map-vals
-;             (fn [txs-or-path]
-;               (fn []
-;                 (let [txs-or-path-conformed
-;                       (u/conform! ::partial-txs-or-txs-path txs-or-path)]
-;                   (->> txs-or-path
-;                        (resolve-txs txs-or-path-conformed)
-;                        form-txs
-;                        (transact root)))))
-;             actions-map))]
-;    (let [dispatch-val (dispatch-fn orig-ent)
-;          ent-actions  (get entity-actions dispatch-val)]
-;      (cond-> orig-ent
-;        ent-actions (assoc :actions (wrap ent-actions))
-;        actions (update :actions merge (wrap actions))
-;        handlers (assoc :handlers (wrap handlers))))))
+(s/def ::txs-path (s/coll-of keyword?))
+
+(s/def ::op-path
+  (s/and #(or (keyword? %) (vector? %))
+    (s/conformer
+      (fn [x]
+        (if (keyword? x)
+          [x]
+          (and (vector? x) (not-empty x)))))))
+
+(s/def ::partial-tx
+  (s/cat :op keyword?
+    :path (s/? ::op-path)
+    :ent (s/? ::ent/partial-entity)))
+
+(s/def ::partial-txs (s/coll-of ::partial-tx))
+
+(s/def ::partial-txs-or-txs-path
+  (s/or :partial-txs ::partial-txs
+    :path ::txs-path))
+
+(defn wrap-actions-and-handlers
+  [{:as root :keys [dispatch-fn transact entity-actions add-id ->ref]}
+   {:as orig-ent :keys [actions handlers parent-id]}]
+  (letfn [(resolve-txs [conformed txs-or-txs-path]
+            (case (first conformed)
+              :partial-txs txs-or-txs-path
+              :path (get-in entity-actions txs-or-txs-path)))
+          (form-tx [tx]
+            (let [{:keys [op path ent]} (u/conform! ::partial-tx tx)]
+              (cond-> [op]
+                path (conj (replace {:<- parent-id} path))
+                (not path) (conj (:path orig-ent))
+                ent (conj (cond-> ent (nil? (->ref ent)) add-id))
+                (not ent) (conj orig-ent))))
+          (form-txs [txs]
+            (mapv form-tx txs))
+          (wrap [actions-map]
+            (md/map-vals
+              (fn [txs-or-path]
+                ; FIXME figure out if (u/partial) can avoid re-renders here
+                (fn []
+                  (let [txs-or-path-conformed
+                        (u/conform! ::partial-txs-or-txs-path txs-or-path)]
+                    (->> txs-or-path
+                      (resolve-txs txs-or-path-conformed)
+                      form-txs
+                      (transact root)))))
+              actions-map))]
+    (let [dispatch-val (dispatch-fn orig-ent)
+          ent-actions  (get entity-actions dispatch-val)]
+      (cond-> orig-ent
+        ent-actions (assoc :actions (wrap ent-actions))
+        actions (update :actions merge (wrap actions))
+        handlers (assoc :handlers (wrap handlers))))))
 
 (defn- deref-state-hook [x]
   #?(:clj  x
@@ -156,32 +157,32 @@
      :keys [lookup-sub lookup]} {:as m :keys [root-id data parent-id path]}]
    ;#?(:cljs (js/console.log :resolving m))
    (when-let [data (some-> (or data ((or lookup-sub lookup) (or root-id path)))
-                           js-promise-hook
-                           deref-state-hook)]
+                     js-promise-hook
+                     deref-state-hook)]
      (as-> data x
-           (with-meta x {:root root})
-           (cond-> x parent-id (assoc :parent-id parent-id))
-           (cond-> x (or path root-id) (assoc :path (or path [root-id])))
-           #_(cond->> x
-               root-id (wrap-actions-and-handlers root))    ; todo wrap-actions for nested
-           (resolve-child-content
-             root
-             x
-             (fn [{:as m :keys [k id-or-ent content-k content-type]}]
-               [resolved-view
-                root
-                (case content-type
-                  ; graph
-                  :ref
-                  {:root-id   id-or-ent
-                   :parent-id root-id
-                   :path      (into [root-id content-k] (u/ensure-vec k))}
-                  ; nested
-                  :entity
-                  {:data      id-or-ent
-                   :parent-id root-id
-                   :path      (into (u/ensure-vec path) (remove nil?) [content-k k])})]))
-           (root x)))))
+       (with-meta x {:root root})
+       (cond-> x parent-id (assoc :parent-id parent-id))
+       (cond-> x (or path root-id) (assoc :path (or path [root-id])))
+       (cond->> x
+         root-id (wrap-actions-and-handlers root))          ; todo wrap-actions for nested
+       (resolve-child-content
+         root
+         x
+         (fn [{:as m :keys [k id-or-ent content-k content-type]}]
+           [resolved-view
+            root
+            (case content-type
+              ; graph
+              :ref
+              {:root-id   id-or-ent
+               :parent-id root-id
+               :path      (into [root-id content-k] (u/ensure-vec k))}
+              ; nested
+              :entity
+              {:data      id-or-ent
+               :parent-id root-id
+               :path      (into (u/ensure-vec path) (remove nil?) [content-k k])})]))
+       (root x)))))
 
 (defn resolved-data
   ([root]
@@ -189,26 +190,26 @@
   ([{:as root :keys [lookup ->ref]} {:keys [root-id data parent-id path]}]
    (when-let [data (or data (lookup (or root-id path)))]
      (as-> data x
-           (with-meta x {:root root})
-           (cond-> x parent-id (assoc :parent-id parent-id))
-           (cond-> x (or path root-id) (assoc :path (or path [root-id])))
-           (resolve-child-content
+       (with-meta x {:root root})
+       (cond-> x parent-id (assoc :parent-id parent-id))
+       (cond-> x (or path root-id) (assoc :path (or path [root-id])))
+       (resolve-child-content
+         root
+         x
+         (fn [{:keys [k id-or-ent content-k content-type]}]
+           (resolved-data
              root
-             x
-             (fn [{:keys [k id-or-ent content-k content-type]}]
-               (resolved-data
-                 root
-                 (case content-type
-                   ; graph
-                   :ref
-                   {:root-id   id-or-ent
-                    :parent-id root-id
-                    :path      (into [root-id content-k] (u/ensure-vec k))}
-                   ; nested
-                   :entity
-                   {:data      id-or-ent
-                    :parent-id root-id
-                    :path      (into (u/ensure-vec path) (remove nil?) [content-k k])}))))))))
+             (case content-type
+               ; graph
+               :ref
+               {:root-id   id-or-ent
+                :parent-id root-id
+                :path      (into [root-id content-k] (u/ensure-vec k))}
+               ; nested
+               :entity
+               {:data      id-or-ent
+                :parent-id root-id
+                :path      (into (u/ensure-vec path) (remove nil?) [content-k k])}))))))))
 
 (comment
 
